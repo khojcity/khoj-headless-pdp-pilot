@@ -8,6 +8,12 @@
   --color-light: #fff;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 img {
   border-radius: 4px;
 }
@@ -229,6 +235,7 @@ button.reset:hover:not(:has(> *)) {
   background: #f7f7f4;
   color: #111a12;
   min-height: 100vh;
+  overflow-x: clip;
 }
 
 .pilot-header {
@@ -1249,6 +1256,7 @@ button.reset:hover:not(:has(> *)) {
   margin: 0 auto;
   min-height: calc(100vh - 96px);
   padding: 22px 18px 92px;
+  width: 100%;
 }
 
 .pilot-cart-header {
@@ -1304,6 +1312,7 @@ button.reset:hover:not(:has(> *)) {
   grid-template-columns: minmax(0, 1fr) minmax(310px, 360px);
   gap: 16px;
   align-items: start;
+  min-width: 0;
 }
 
 .pilot-cart-progress {
@@ -1339,6 +1348,7 @@ button.reset:hover:not(:has(> *)) {
 .pilot-cart-lines {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .pilot-cart-section-heading {
@@ -1363,6 +1373,7 @@ button.reset:hover:not(:has(> *)) {
   grid-template-columns: 118px minmax(0, 1fr);
   gap: 14px;
   padding: 14px;
+  min-width: 0;
 }
 
 .pilot-cart-line img {
@@ -1376,6 +1387,7 @@ button.reset:hover:not(:has(> *)) {
   display: grid;
   gap: 12px;
   align-content: start;
+  min-width: 0;
 }
 
 .pilot-cart-line-title {
@@ -1383,6 +1395,7 @@ button.reset:hover:not(:has(> *)) {
   display: flex;
   gap: 16px;
   justify-content: space-between;
+  min-width: 0;
 }
 
 .pilot-cart-line-title a {
@@ -1390,6 +1403,7 @@ button.reset:hover:not(:has(> *)) {
   font-size: 1rem;
   font-weight: 800;
   line-height: 1.25;
+  overflow-wrap: anywhere;
   text-decoration: none;
 }
 
@@ -1459,6 +1473,7 @@ button.reset:hover:not(:has(> *)) {
   top: 88px;
   display: grid;
   gap: 14px;
+  min-width: 0;
   padding: 18px;
 }
 
@@ -1467,6 +1482,7 @@ button.reset:hover:not(:has(> *)) {
   border: 1px solid #e1e8dc;
   display: grid;
   gap: 8px;
+  min-width: 0;
   padding: 12px;
 }
 
@@ -1492,6 +1508,7 @@ button.reset:hover:not(:has(> *)) {
 .pilot-cart-coupon {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
 }
 
 .pilot-cart-coupon input {
@@ -1590,6 +1607,17 @@ button.reset:hover:not(:has(> *)) {
 }
 
 @media (max-width: 760px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  .pilot-shell {
+    margin: 0 auto;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
   .pilot-header {
     height: 56px;
     padding: 0 14px;
@@ -1601,15 +1629,24 @@ button.reset:hover:not(:has(> *)) {
 
   .pilot-back-link {
     font-size: 0.86rem;
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .pilot-promise-bar {
     font-size: 0.62rem;
     letter-spacing: 0.04em;
+    overflow: hidden;
   }
 
   .pilot-promise-bar span {
     padding: 8px 4px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .pilot-product-grid {
@@ -1736,12 +1773,17 @@ button.reset:hover:not(:has(> *)) {
 
   .pilot-cart {
     min-height: calc(100vh - 84px);
-    padding: 18px 10px 96px;
+    margin: 0 auto;
+    max-width: 440px;
+    overflow-x: hidden;
+    padding: 16px 10px 108px;
   }
 
   .pilot-cart-header,
   .pilot-cart-layout {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
   }
 
   .pilot-cart-header {
@@ -1753,6 +1795,10 @@ button.reset:hover:not(:has(> *)) {
     font-size: 2rem;
   }
 
+  .pilot-cart-header p:not(.pilot-kicker) {
+    max-width: 30rem;
+  }
+
   .pilot-cart-header a {
     justify-self: start;
   }
@@ -1760,21 +1806,38 @@ button.reset:hover:not(:has(> *)) {
   .pilot-cart-progress {
     margin-bottom: 10px;
     padding: 12px;
+    width: 100%;
   }
 
   .pilot-cart-layout {
     gap: 10px;
   }
 
+  .pilot-cart-lines {
+    background: #fff;
+    border: 1px solid #e1ddd2;
+    gap: 0;
+    min-width: 0;
+    padding: 14px;
+  }
+
+  .pilot-cart-section-heading {
+    border-bottom: 1px solid #ece8de;
+    margin: 0 0 12px;
+    padding-bottom: 10px;
+  }
+
   .pilot-cart-line {
-    grid-template-columns: 88px minmax(0, 1fr);
-    gap: 10px;
-    padding: 10px;
+    border: 0;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+    padding: 0;
+    width: 100%;
   }
 
   .pilot-cart-line img {
-    width: 88px;
-    height: 88px;
+    height: 104px;
+    width: 92px;
   }
 
   .pilot-cart-line-title {
@@ -1796,7 +1859,9 @@ button.reset:hover:not(:has(> *)) {
   }
 
   .pilot-cart-controls {
+    align-items: center;
     gap: 6px;
+    justify-content: flex-start;
   }
 
   .pilot-cart-controls button {
@@ -1809,8 +1874,42 @@ button.reset:hover:not(:has(> *)) {
   }
 
   .pilot-cart-summary {
+    border: 1px solid #e1ddd2;
+    gap: 12px;
     position: static;
-    padding: 14px;
+    padding: 16px 14px;
+    width: 100%;
+  }
+
+  .pilot-cart-offer {
+    padding: 12px;
+  }
+
+  .pilot-cart-offer span {
+    font-size: 0.84rem;
+  }
+
+  .pilot-cart-coupon {
+    grid-template-columns: minmax(0, 1fr) minmax(70px, auto);
+  }
+
+  .pilot-cart-coupon input {
+    font-size: 0.9rem;
+    width: 100%;
+  }
+
+  .pilot-cart-coupon button {
+    font-size: 0.82rem;
+    padding: 0 10px;
+  }
+
+  .pilot-cart-summary dl > div {
+    gap: 10px;
+  }
+
+  .pilot-cart-summary dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .pilot-cart-summary .pilot-button {
