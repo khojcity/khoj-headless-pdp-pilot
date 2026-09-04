@@ -247,7 +247,7 @@ export default function Product() {
             </ul>
           </div>
 
-          <ProductDetails descriptionHtml={product.descriptionHtml} />
+          <ProductDetails />
         </div>
       </section>
 
@@ -448,15 +448,42 @@ function ReviewBadge({summary}: {summary: ReviewSummary | null}) {
   );
 }
 
-function ProductDetails({descriptionHtml}: {descriptionHtml: string}) {
+function ProductDetails() {
   return (
     <section className="pilot-details" aria-labelledby="details-heading">
       <h2 id="details-heading">Product details</h2>
-      <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
+      <p>
+        A handmade necklace and earrings set with hand-painted peacock-inspired
+        artwork, glass bead accents, and a lightweight festive finish.
+      </p>
       <dl>
         <div>
           <dt>Craft</dt>
-          <dd>Hand-painted and handmade</dd>
+          <dd>Hand-painted, handmade, and handcrafted</dd>
+        </div>
+        <div>
+          <dt>Includes</dt>
+          <dd>Necklace and matching earrings</dd>
+        </div>
+        <div>
+          <dt>Material</dt>
+          <dd>Cardboard, fabric, acrylic paint, and glass beads</dd>
+        </div>
+        <div>
+          <dt>Colour</dt>
+          <dd>Black and white base with peacock blue-green accents</dd>
+        </div>
+        <div>
+          <dt>Weight</dt>
+          <dd>Approx. 50 grams</dd>
+        </div>
+        <div>
+          <dt>Size</dt>
+          <dd>Approx. 20 x 4 inches</dd>
+        </div>
+        <div>
+          <dt>Best worn with</dt>
+          <dd>Sarees, kurtis, festive wear, and traditional occasions</dd>
         </div>
         <div>
           <dt>Delivery</dt>

@@ -279,7 +279,7 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-pdp {
   background: #fbfbf7;
-  padding-bottom: 88px;
+  padding-bottom: 104px;
 }
 
 .pilot-product-grid {
@@ -398,7 +398,7 @@ button.reset:hover:not(:has(> *)) {
   border: 1px solid #e1ddd2;
   box-shadow: 0 18px 48px rgba(20, 32, 22, 0.07);
   display: grid;
-  gap: 12px;
+  gap: 14px;
   padding: 18px;
 }
 
@@ -493,6 +493,10 @@ button.reset:hover:not(:has(> *)) {
   gap: 10px;
   grid-template-columns: 1fr;
   margin-top: 0;
+}
+
+.pilot-actions form {
+  margin: 0;
 }
 
 .pilot-button {
@@ -630,6 +634,12 @@ button.reset:hover:not(:has(> *)) {
   padding: 18px;
 }
 
+.pilot-details > p {
+  color: #4c5b49;
+  line-height: 1.65;
+  margin: 0 0 16px;
+}
+
 .pilot-story-band {
   align-items: center;
   background: #142016;
@@ -666,21 +676,22 @@ button.reset:hover:not(:has(> *)) {
   margin: 0 0 12px;
 }
 
-.pilot-details > div {
-  color: #394637;
-  font-size: 0.96rem;
-}
-
 .pilot-details dl {
   display: grid;
-  gap: 10px;
-  margin: 18px 0 0;
+  gap: 0;
+  margin: 0;
 }
 
 .pilot-details dl > div {
-  background: #fbfbf7;
-  border: 1px solid #ece8de;
-  padding: 12px;
+  border-top: 1px solid #ece8de;
+  display: grid;
+  gap: 4px;
+  padding: 12px 0;
+}
+
+.pilot-details dl > div:first-child {
+  border-top: 0;
+  padding-top: 0;
 }
 
 .pilot-details dt {
@@ -693,9 +704,9 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .pilot-related {
-  margin: 36px auto 0;
+  margin: 30px auto 0;
   max-width: 1180px;
-  padding: 0 16px;
+  padding: 0 14px;
 }
 
 .pilot-related-grid {
@@ -722,9 +733,13 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .pilot-related-grid span {
+  display: -webkit-box;
   font-size: 0.88rem;
   font-weight: 700;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
   line-height: 1.35;
+  overflow: hidden;
 }
 
 .pilot-related-grid small {
@@ -741,7 +756,7 @@ button.reset:hover:not(:has(> *)) {
   gap: 10px;
   grid-template-columns: minmax(86px, auto) 1fr;
   left: 0;
-  padding: 10px 16px;
+  padding: 10px 16px max(10px, env(safe-area-inset-bottom));
   position: fixed;
   right: 0;
   z-index: 6;
@@ -1365,8 +1380,21 @@ button.reset:hover:not(:has(> *)) {
 }
 
 @media (max-width: 760px) {
+  .pilot-header {
+    height: 56px;
+    padding: 0 14px;
+  }
+
+  .pilot-logo {
+    font-size: 0.95rem;
+  }
+
+  .pilot-back-link {
+    font-size: 0.86rem;
+  }
+
   .pilot-promise-bar {
-    font-size: 0.66rem;
+    font-size: 0.62rem;
     letter-spacing: 0.04em;
   }
 
@@ -1375,23 +1403,108 @@ button.reset:hover:not(:has(> *)) {
   }
 
   .pilot-product-grid {
-    padding: 12px;
+    gap: 12px;
+    padding: 12px 10px 0;
+  }
+
+  .pilot-media-main {
+    max-height: min(72vh, 520px);
   }
 
   .pilot-product-panel {
-    border-left: 0;
-    border-right: 0;
-    box-shadow: none;
-    margin: 0 -12px;
-    padding: 20px 16px;
+    margin: 0;
+    padding: 14px 0 0;
+  }
+
+  .pilot-title-block {
+    margin-bottom: 12px;
+    padding: 0 4px 12px;
+  }
+
+  .pilot-product-panel h1 {
+    font-size: 1.85rem;
+    line-height: 1.05;
+  }
+
+  .pilot-title-block p:last-child {
+    font-size: 0.98rem;
+  }
+
+  .pilot-stock {
+    padding: 0 4px;
+  }
+
+  .pilot-commerce-card,
+  .pilot-highlight-panel,
+  .pilot-details {
+    padding: 16px;
+  }
+
+  .pilot-reviews {
+    font-size: 0.9rem;
+  }
+
+  .pilot-price-row {
+    font-size: 1.65rem;
+  }
+
+  .pilot-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pilot-button {
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+    min-height: 50px;
+    padding: 0 12px;
   }
 
   .pilot-assurance {
     grid-template-columns: 1fr;
   }
 
+  .pilot-highlight-panel {
+    margin-top: 12px;
+  }
+
+  .pilot-details dl > div {
+    grid-template-columns: minmax(88px, 0.42fr) minmax(0, 1fr);
+  }
+
+  .pilot-details dd {
+    margin: 0;
+  }
+
   .pilot-story-band {
     margin-top: 0;
+    padding: 26px 20px;
+  }
+
+  .pilot-related {
+    padding: 0 10px;
+  }
+
+  .pilot-related-grid {
+    gap: 10px;
+  }
+
+  .pilot-related-grid a {
+    padding: 8px;
+  }
+
+  .pilot-related-grid span {
+    font-size: 0.78rem;
+    -webkit-line-clamp: 3;
+  }
+
+  .pilot-sticky-atc {
+    gap: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .pilot-sticky-atc .pilot-button {
+    min-height: 52px;
   }
 
   .pilot-cart {
