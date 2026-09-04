@@ -1,0 +1,61 @@
+{
+  "include": [
+    "env.d.ts",
+    "app/entry.client.tsx",
+    "app/entry.server.tsx",
+    "app/root.tsx",
+    "app/routes.ts",
+    "app/routes/$.tsx",
+    "app/routes/[robots.txt].tsx",
+    "app/routes/[sitemap.xml].tsx",
+    "app/routes/_index.tsx",
+    "app/routes/cart.tsx",
+    "app/routes/products.$handle.tsx",
+    "app/components/AddToCartButton.tsx",
+    "app/components/CartLineItem.tsx",
+    "app/components/CartMain.tsx",
+    "app/components/CartSummary.tsx",
+    "app/components/KhojTracking.tsx",
+    "app/components/PilotShell.tsx",
+    "app/lib/context.ts",
+    "app/lib/fragments.ts",
+    "app/lib/redirect.ts",
+    "app/lib/session.ts",
+    "app/**/*.d.ts",
+    "*.ts",
+    "*.tsx",
+    "*.d.ts",
+    ".graphqlrc.ts",
+    ".react-router/types/**/*"
+  ],
+  "exclude": ["node_modules", "dist", "build", "packages/**/dist/**/*"],
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "module": "ES2022",
+    "target": "ES2022",
+    "strict": true,
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "types": [
+      "@shopify/oxygen-workers-types",
+      "react-router",
+      "@shopify/hydrogen/react-router-types",
+      "vite/client"
+    ],
+    "paths": {
+      "~/*": ["app/*"]
+    },
+    "noEmit": true,
+    "rootDirs": [".", "./.react-router/types"],
+    "incremental": true,
+    "composite": false,
+    "verbatimModuleSyntax": true
+  }
+}

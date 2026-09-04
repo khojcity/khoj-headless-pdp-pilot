@@ -1,0 +1,12 @@
+node_modules
+.react-router
+.env
+.env.*
+!.env.example
+dist
+build
+.oxygen
+.cache
+.turbo
+tsconfig.tsbuildinfo
+*.log
