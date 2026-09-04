@@ -499,6 +499,11 @@ button.reset:hover:not(:has(> *)) {
   margin: 0;
 }
 
+.pilot-actions form,
+.pilot-actions button {
+  width: 100%;
+}
+
 .pilot-button {
   border: 1px solid #111a12;
   cursor: pointer;
@@ -754,7 +759,7 @@ button.reset:hover:not(:has(> *)) {
   bottom: 0;
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(86px, auto) 1fr;
+  grid-template-columns: minmax(86px, auto) minmax(0, 1fr);
   left: 0;
   padding: 10px 16px max(10px, env(safe-area-inset-bottom));
   position: fixed;
@@ -774,6 +779,11 @@ button.reset:hover:not(:has(> *)) {
 .pilot-sticky-atc small {
   color: #596858;
   font-size: 0.72rem;
+}
+
+.pilot-sticky-atc form,
+.pilot-sticky-atc button {
+  width: 100%;
 }
 
 @media (min-width: 760px) {
@@ -1449,7 +1459,17 @@ button.reset:hover:not(:has(> *)) {
   }
 
   .pilot-actions {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+  }
+
+  .pilot-actions .pilot-button-secondary {
+    background: #102014;
+    color: #fff;
+  }
+
+  .pilot-actions .pilot-button-primary {
+    background: #fff;
+    color: #102014;
   }
 
   .pilot-button {
@@ -1499,8 +1519,15 @@ button.reset:hover:not(:has(> *)) {
 
   .pilot-sticky-atc {
     gap: 8px;
+    grid-template-columns: 1fr;
     padding-left: 10px;
     padding-right: 10px;
+  }
+
+  .pilot-sticky-atc > div {
+    align-items: baseline;
+    display: flex;
+    justify-content: space-between;
   }
 
   .pilot-sticky-atc .pilot-button {
