@@ -2,6 +2,7 @@ import {useLoaderData, Link, data, type HeadersFunction} from 'react-router';
 import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm, Image, Money} from '@shopify/hydrogen';
+import {trackKhojActivity} from '~/components/KhojTracking';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: `Cart | KHOJ.CITY`}];
@@ -107,6 +108,22 @@ export default function Cart() {
   const cart = useLoaderData<typeof loader>();
   const lines = cart?.lines?.nodes || [];
   const hasItems = lines.length > 0;
+  const checkoutTracking = () => ({
+    eventType: 'checkout_started',
+    eventId: `hydrogen_cart_checkout:${cart?.id || 'cart'}:${Date.now()}`,
+    items: lines.map((line: any) => {
+      const merchandise = line.merchandise || {};
+      return {
+        id: merchandise.product?.id || merchandise.id || line.id,
+        variantId: merchandise.id,
+        title: merchandise.product?.title || merchandise.title || 'Cart item',
+        price: line.cost?.totalAmount,
+        quantity: line.quantity || 1,
+      };
+    }),
+    totalPrice: cart?.cost?.subtotalAmount,
+    checkoutUrl: cart?.checkoutUrl,
+  });
 
   return (
     <main className="pilot-cart">
@@ -159,7 +176,11 @@ export default function Cart() {
             </dl>
 
             {cart?.checkoutUrl ? (
-              <a className="pilot-button pilot-button-primary" href={cart.checkoutUrl}>
+              <a
+                className="pilot-button pilot-button-primary"
+                href={cart.checkoutUrl}
+                onClick={() => trackKhojActivity(checkoutTracking())}
+              >
                 Checkout
               </a>
             ) : null}
