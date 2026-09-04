@@ -112,11 +112,23 @@ export default function Product() {
     () => ({
       id: product.id,
       variantId: selectedVariant?.id || '',
+      handle: product.handle,
+      url: LIVE_PRODUCT_URL,
       title: product.title,
+      variantTitle: selectedVariant?.title || '',
+      vendor: product.vendor,
       price: selectedVariant?.price,
       quantity: 1,
     }),
-    [product.id, product.title, selectedVariant?.id, selectedVariant?.price],
+    [
+      product.handle,
+      product.id,
+      product.title,
+      product.vendor,
+      selectedVariant?.id,
+      selectedVariant?.price,
+      selectedVariant?.title,
+    ],
   );
 
   const addToCartTracking = () => ({

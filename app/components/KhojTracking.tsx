@@ -15,7 +15,11 @@ type Money = {
 type TrackProduct = {
   id: string;
   variantId?: string;
+  handle?: string;
+  url?: string;
   title: string;
+  variantTitle?: string;
+  vendor?: string;
   price?: Money | null;
   quantity?: number;
 };

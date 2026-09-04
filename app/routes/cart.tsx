@@ -116,7 +116,13 @@ export default function Cart() {
       return {
         id: merchandise.product?.id || merchandise.id || line.id,
         variantId: merchandise.id,
+        handle: merchandise.product?.handle,
+        url: merchandise.product?.handle
+          ? `https://www.khoj.city/products/${merchandise.product.handle}`
+          : undefined,
         title: merchandise.product?.title || merchandise.title || 'Cart item',
+        variantTitle: merchandise.title,
+        vendor: merchandise.product?.vendor,
         price: line.cost?.totalAmount,
         quantity: line.quantity || 1,
       };
