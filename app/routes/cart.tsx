@@ -1,11 +1,10 @@
-import {useLoaderData, data, type HeadersFunction} from 'react-router';
+import {useLoaderData, Link, data, type HeadersFunction} from 'react-router';
 import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
-import {CartForm} from '@shopify/hydrogen';
-import {CartMain} from '~/components/CartMain';
+import {CartForm, Image, Money} from '@shopify/hydrogen';
 
 export const meta: Route.MetaFunction = () => {
-  return [{title: `Hydrogen | Cart`}];
+  return [{title: `Cart | KHOJ.CITY`}];
 };
 
 export const headers: HeadersFunction = ({actionHeaders}) => actionHeaders;
@@ -106,11 +105,162 @@ export async function loader({context}: Route.LoaderArgs) {
 
 export default function Cart() {
   const cart = useLoaderData<typeof loader>();
+  const lines = cart?.lines?.nodes || [];
+  const hasItems = lines.length > 0;
 
   return (
-    <div className="cart">
-      <h1>Cart</h1>
-      <CartMain layout="page" cart={cart} />
-    </div>
+    <main className="pilot-cart">
+      <div className="pilot-cart-header">
+        <div>
+          <p className="pilot-kicker">Shopify checkout</p>
+          <h1>Your cart</h1>
+        </div>
+        <Link to="/products/mor-pankh-classic-multi-color-hand-painted-necklace-set-hp-np">
+          Continue shopping
+        </Link>
+      </div>
+
+      {!hasItems ? (
+        <section className="pilot-cart-empty">
+          <h2>Your cart is empty</h2>
+          <p>Choose the Mor Pankh necklace set to continue the pilot flow.</p>
+          <Link
+            className="pilot-button pilot-button-primary"
+            to="/products/mor-pankh-classic-multi-color-hand-painted-necklace-set-hp-np"
+          >
+            View product
+          </Link>
+        </section>
+      ) : (
+        <section className="pilot-cart-layout">
+          <div className="pilot-cart-lines">
+            {lines.map((line: any) => (
+              <CartLine key={line.id} line={line} />
+            ))}
+          </div>
+
+          <aside className="pilot-cart-summary">
+            <h2>Order summary</h2>
+            <dl>
+              <div>
+                <dt>Subtotal</dt>
+                <dd>
+                  {cart?.cost?.subtotalAmount ? (
+                    <Money data={cart.cost.subtotalAmount} />
+                  ) : (
+                    '-'
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Quantity</dt>
+                <dd>{cart?.totalQuantity || 0}</dd>
+              </div>
+            </dl>
+
+            {cart?.checkoutUrl ? (
+              <a className="pilot-button pilot-button-primary" href={cart.checkoutUrl}>
+                Checkout
+              </a>
+            ) : null}
+
+            <p>Free delivery and COD availability are confirmed in Shopify checkout.</p>
+          </aside>
+        </section>
+      )}
+    </main>
+  );
+}
+
+function CartLine({line}: {line: any}) {
+  const quantity = line.quantity || 1;
+  const merchandise = line.merchandise || {};
+  const product = merchandise.product || {};
+  const selectedOptions = merchandise.selectedOptions || [];
+
+  return (
+    <article className="pilot-cart-line">
+      {merchandise.image ? (
+        <Image
+          data={merchandise.image}
+          alt={merchandise.image.altText || product.title || merchandise.title}
+          sizes="120px"
+          loading="lazy"
+        />
+      ) : null}
+
+      <div className="pilot-cart-line-body">
+        <Link to={`/products/${product.handle || ''}`}>
+          {product.title || merchandise.title}
+        </Link>
+
+        {line.cost?.totalAmount ? <Money data={line.cost.totalAmount} /> : null}
+
+        {selectedOptions.length ? (
+          <ul>
+            {selectedOptions
+              .filter((option: any) => option.value !== 'Default Title')
+              .map((option: any) => (
+                <li key={option.name}>
+                  {option.name}: {option.value}
+                </li>
+              ))}
+          </ul>
+        ) : null}
+
+        <div className="pilot-cart-controls">
+          <CartQuantityButton
+            lineId={line.id}
+            quantity={Math.max(0, quantity - 1)}
+            disabled={quantity <= 1}
+          >
+            -
+          </CartQuantityButton>
+          <span>{quantity}</span>
+          <CartQuantityButton lineId={line.id} quantity={quantity + 1}>
+            +
+          </CartQuantityButton>
+          <CartRemoveButton lineId={line.id} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function CartQuantityButton({
+  children,
+  disabled,
+  lineId,
+  quantity,
+}: {
+  children: React.ReactNode;
+  disabled?: boolean;
+  lineId: string;
+  quantity: number;
+}) {
+  return (
+    <CartForm
+      route="/cart"
+      action={CartForm.ACTIONS.LinesUpdate}
+      inputs={{lines: [{id: lineId, quantity}]}}
+    >
+      <button disabled={disabled} type="submit">
+        {children}
+      </button>
+    </CartForm>
+  );
+}
+
+function CartRemoveButton({lineId}: {lineId: string}) {
+  return (
+    <CartForm
+      route="/cart"
+      action={CartForm.ACTIONS.LinesRemove}
+      inputs={{lineIds: [lineId]}}
+    >
+      <button className="pilot-cart-remove" type="submit">
+        Remove
+      </button>
+    </CartForm>
   );
 }
