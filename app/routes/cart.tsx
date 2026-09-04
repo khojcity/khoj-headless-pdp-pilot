@@ -109,6 +109,7 @@ export default function Cart() {
   const lines = cart?.lines?.nodes || [];
   const hasItems = lines.length > 0;
   const totalQuantity = cart?.totalQuantity || 0;
+  const summary = getCartSummary(cart, lines);
   const checkoutTracking = () => ({
     eventType: 'checkout_started',
     eventId: `hydrogen_cart_checkout:${cart?.id || 'cart'}:${Date.now()}`,
@@ -136,7 +137,7 @@ export default function Cart() {
     <main className="pilot-cart">
       <div className="pilot-cart-header">
         <div>
-          <p className="pilot-kicker">Secure Shopify checkout</p>
+          <p className="pilot-kicker">Review your order</p>
           <h1>Your cart</h1>
           <p>
             Review your handmade jewellery order before moving to checkout.
@@ -159,62 +160,112 @@ export default function Cart() {
           </Link>
         </section>
       ) : (
-        <section className="pilot-cart-layout">
-          <div className="pilot-cart-lines">
-            <div className="pilot-cart-section-heading">
-              <h2>Items</h2>
-              <span>
-                {totalQuantity} {totalQuantity === 1 ? 'item' : 'items'}
-              </span>
+        <>
+          <section className="pilot-cart-progress" aria-label="Delivery reward">
+            <div>
+              <strong>Free delivery unlocked</strong>
+              <span>No extra shipping charge on this order.</span>
             </div>
-            {lines.map((line: any) => (
-              <CartLine key={line.id} line={line} />
-            ))}
-          </div>
+            <div className="pilot-cart-progress-bar">
+              <span />
+            </div>
+          </section>
 
-          <aside className="pilot-cart-summary">
-            <h2>Order summary</h2>
-            <div className="pilot-cart-promise">
-              <strong>Free delivery</strong>
-              <span>COD and prepaid options continue in checkout.</span>
+          <section className="pilot-cart-layout">
+            <div className="pilot-cart-lines">
+              <div className="pilot-cart-section-heading">
+                <h2>Review your order</h2>
+                <span>
+                  {totalQuantity} {totalQuantity === 1 ? 'item' : 'items'}
+                </span>
+              </div>
+              {lines.map((line: any) => (
+                <CartLine key={line.id} line={line} />
+              ))}
             </div>
-            <dl>
+
+            <aside className="pilot-cart-summary">
+              <h2>Price breakdown</h2>
+              <div className="pilot-cart-offer">
+                <strong>Apply coupon</strong>
+                <span>Discount codes are validated by Shopify checkout.</span>
+                <CartDiscountForm discountCodes={cart?.discountCodes || []} />
+              </div>
+              <dl>
+                <div>
+                  <dt>MRP</dt>
+                  <dd>{formatRupees(summary.compareAtTotal)}</dd>
+                </div>
+                <div>
+                  <dt>Discount</dt>
+                  <dd className="pilot-cart-saving">
+                    -{formatRupees(summary.savings)}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Delivery fee</dt>
+                  <dd>
+                    <span className="pilot-cart-strike">₹49</span> Free
+                  </dd>
+                </div>
+                <div className="pilot-cart-total-row">
+                  <dt>Total</dt>
+                  <dd>
+                    {cart?.cost?.subtotalAmount ? (
+                      <Money data={cart.cost.subtotalAmount} />
+                    ) : (
+                      '-'
+                    )}
+                  </dd>
+                </div>
+              </dl>
+
+              {summary.savings > 0 ? (
+                <p className="pilot-cart-savings">
+                  You save {formatRupees(summary.savings)} on this order.
+                </p>
+              ) : null}
+
+              {cart?.checkoutUrl ? (
+                <a
+                  className="pilot-button pilot-button-primary"
+                  href={cart.checkoutUrl}
+                  onClick={() => trackKhojActivity(checkoutTracking())}
+                >
+                  Proceed to checkout
+                </a>
+              ) : null}
+
+              <div className="pilot-cart-trust">
+                <span>COD available</span>
+                <span>Secure checkout</span>
+                <span>Easy order support</span>
+              </div>
+            </aside>
+          </section>
+
+          {cart?.checkoutUrl ? (
+            <div className="pilot-cart-sticky">
               <div>
-                <dt>Subtotal</dt>
-                <dd>
+                <span>Total</span>
+                <strong>
                   {cart?.cost?.subtotalAmount ? (
                     <Money data={cart.cost.subtotalAmount} />
                   ) : (
                     '-'
                   )}
-                </dd>
+                </strong>
               </div>
-              <div>
-                <dt>Quantity</dt>
-                <dd>{totalQuantity}</dd>
-              </div>
-              <div>
-                <dt>Delivery</dt>
-                <dd>Free</dd>
-              </div>
-            </dl>
-
-            {cart?.checkoutUrl ? (
               <a
                 className="pilot-button pilot-button-primary"
                 href={cart.checkoutUrl}
                 onClick={() => trackKhojActivity(checkoutTracking())}
               >
-                Checkout securely
+                Checkout
               </a>
-            ) : null}
-
-            <p>
-              Final discounts, address, COD eligibility, and payment options are
-              confirmed by Shopify checkout.
-            </p>
-          </aside>
-        </section>
+            </div>
+          ) : null}
+        </>
       )}
     </main>
   );
@@ -260,17 +311,19 @@ function CartLine({line}: {line: any}) {
         ) : null}
 
         <div className="pilot-cart-controls">
-          <CartQuantityButton
-            lineId={line.id}
-            quantity={Math.max(0, quantity - 1)}
-            disabled={quantity <= 1}
-          >
-            -
-          </CartQuantityButton>
-          <span>{quantity}</span>
-          <CartQuantityButton lineId={line.id} quantity={quantity + 1}>
-            +
-          </CartQuantityButton>
+          <div className="pilot-cart-stepper" aria-label="Quantity">
+            <CartQuantityButton
+              lineId={line.id}
+              quantity={Math.max(0, quantity - 1)}
+              disabled={quantity <= 1}
+            >
+              -
+            </CartQuantityButton>
+            <span>{quantity}</span>
+            <CartQuantityButton lineId={line.id} quantity={quantity + 1}>
+              +
+            </CartQuantityButton>
+          </div>
           <CartRemoveButton lineId={line.id} />
         </div>
       </div>
@@ -300,6 +353,63 @@ function CartQuantityButton({
       </button>
     </CartForm>
   );
+}
+
+function CartDiscountForm({
+  discountCodes,
+}: {
+  discountCodes: Array<{code: string; applicable: boolean}>;
+}) {
+  const appliedCodes = discountCodes.filter((code) => code.applicable);
+
+  return (
+    <CartForm
+      route="/cart"
+      action={CartForm.ACTIONS.DiscountCodesUpdate}
+      inputs={{discountCodes: appliedCodes.map((code) => code.code)}}
+    >
+      <div className="pilot-cart-coupon">
+        <input
+          name="discountCode"
+          placeholder="Discount code"
+          type="text"
+          aria-label="Discount code"
+        />
+        <button type="submit">Apply</button>
+      </div>
+      {appliedCodes.length ? (
+        <p>
+          Applied: {appliedCodes.map((code) => code.code).join(', ')}
+        </p>
+      ) : null}
+    </CartForm>
+  );
+}
+
+function getCartSummary(cart: any, lines: any[]) {
+  const subtotal = Number(cart?.cost?.subtotalAmount?.amount || 0);
+  const compareAtTotal = lines.reduce((total, line) => {
+    const quantity = Number(line.quantity || 1);
+    const compareAt = Number(
+      line.cost?.compareAtAmountPerQuantity?.amount ||
+        line.merchandise?.compareAtPrice?.amount ||
+        line.cost?.amountPerQuantity?.amount ||
+        0,
+    );
+    return total + compareAt * quantity;
+  }, 0);
+
+  return {
+    compareAtTotal: Math.max(compareAtTotal, subtotal),
+    savings: Math.max(0, compareAtTotal - subtotal),
+  };
+}
+
+function formatRupees(amount: number) {
+  return `₹${amount.toLocaleString('en-IN', {
+    maximumFractionDigits: amount % 1 ? 2 : 0,
+    minimumFractionDigits: amount % 1 ? 2 : 0,
+  })}`;
 }
 
 function CartRemoveButton({lineId}: {lineId: string}) {
