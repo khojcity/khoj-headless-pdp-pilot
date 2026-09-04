@@ -218,6 +218,17 @@ export default function Product() {
         </div>
       </section>
 
+      <section className="pilot-story-band" aria-label="Craft promise">
+        <div>
+          <p className="pilot-kicker">Khoj craft note</p>
+          <h2>Made for festive dressing, gifting, and everyday colour.</h2>
+        </div>
+        <p>
+          Each set brings together hand-painted peacock-inspired detail,
+          lightweight construction, and an easy saree-to-kurti styling range.
+        </p>
+      </section>
+
       <RelatedProducts recommendations={recommendations} />
 
       <div className="pilot-sticky-atc">

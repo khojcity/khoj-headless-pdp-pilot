@@ -17,6 +17,11 @@ export function PilotShell({
           Main store
         </a>
       </header>
+      <div className="pilot-promise-bar">
+        <span>Handmade jewellery</span>
+        <span>Free delivery</span>
+        <span>COD available</span>
+      </div>
       {children}
     </div>
   );
