@@ -197,6 +197,7 @@ export default function Product() {
         <AddToCartButton
           className="pilot-button pilot-button-primary"
           disabled={!selectedVariant?.availableForSale}
+          redirectTo="/cart"
           lines={
             selectedVariant
               ? [{merchandiseId: selectedVariant.id, quantity: 1}]
@@ -323,6 +324,7 @@ function PilotProductForm({
         <AddToCartButton
           className="pilot-button pilot-button-secondary"
           disabled={!selectedVariant?.availableForSale}
+          redirectTo="/cart"
           lines={
             selectedVariant
               ? [{merchandiseId: selectedVariant.id, quantity: 1}]
@@ -501,6 +503,9 @@ const PRODUCT_VARIANT_FRAGMENT = `#graphql
       currencyCode
     }
     id
+    product {
+      handle
+    }
     image {
       __typename
       id
