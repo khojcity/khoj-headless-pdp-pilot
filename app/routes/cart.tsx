@@ -108,6 +108,7 @@ export default function Cart() {
   const cart = useLoaderData<typeof loader>();
   const lines = cart?.lines?.nodes || [];
   const hasItems = lines.length > 0;
+  const totalQuantity = cart?.totalQuantity || 0;
   const checkoutTracking = () => ({
     eventType: 'checkout_started',
     eventId: `hydrogen_cart_checkout:${cart?.id || 'cart'}:${Date.now()}`,
@@ -135,8 +136,11 @@ export default function Cart() {
     <main className="pilot-cart">
       <div className="pilot-cart-header">
         <div>
-          <p className="pilot-kicker">Shopify checkout</p>
+          <p className="pilot-kicker">Secure Shopify checkout</p>
           <h1>Your cart</h1>
+          <p>
+            Review your handmade jewellery order before moving to checkout.
+          </p>
         </div>
         <Link to="/products/mor-pankh-classic-multi-color-hand-painted-necklace-set-hp-np">
           Continue shopping
@@ -157,6 +161,12 @@ export default function Cart() {
       ) : (
         <section className="pilot-cart-layout">
           <div className="pilot-cart-lines">
+            <div className="pilot-cart-section-heading">
+              <h2>Items</h2>
+              <span>
+                {totalQuantity} {totalQuantity === 1 ? 'item' : 'items'}
+              </span>
+            </div>
             {lines.map((line: any) => (
               <CartLine key={line.id} line={line} />
             ))}
@@ -164,6 +174,10 @@ export default function Cart() {
 
           <aside className="pilot-cart-summary">
             <h2>Order summary</h2>
+            <div className="pilot-cart-promise">
+              <strong>Free delivery</strong>
+              <span>COD and prepaid options continue in checkout.</span>
+            </div>
             <dl>
               <div>
                 <dt>Subtotal</dt>
@@ -177,7 +191,11 @@ export default function Cart() {
               </div>
               <div>
                 <dt>Quantity</dt>
-                <dd>{cart?.totalQuantity || 0}</dd>
+                <dd>{totalQuantity}</dd>
+              </div>
+              <div>
+                <dt>Delivery</dt>
+                <dd>Free</dd>
               </div>
             </dl>
 
@@ -187,11 +205,14 @@ export default function Cart() {
                 href={cart.checkoutUrl}
                 onClick={() => trackKhojActivity(checkoutTracking())}
               >
-                Checkout
+                Checkout securely
               </a>
             ) : null}
 
-            <p>Free delivery and COD availability are confirmed in Shopify checkout.</p>
+            <p>
+              Final discounts, address, COD eligibility, and payment options are
+              confirmed by Shopify checkout.
+            </p>
           </aside>
         </section>
       )}
@@ -217,11 +238,14 @@ function CartLine({line}: {line: any}) {
       ) : null}
 
       <div className="pilot-cart-line-body">
-        <Link to={`/products/${product.handle || ''}`}>
-          {product.title || merchandise.title}
-        </Link>
+        <div className="pilot-cart-line-title">
+          <Link to={`/products/${product.handle || ''}`}>
+            {product.title || merchandise.title}
+          </Link>
+          {line.cost?.totalAmount ? <Money data={line.cost.totalAmount} /> : null}
+        </div>
 
-        {line.cost?.totalAmount ? <Money data={line.cost.totalAmount} /> : null}
+        <p>Handmade jewellery · Free delivery</p>
 
         {selectedOptions.length ? (
           <ul>
