@@ -134,6 +134,7 @@ export default function Product() {
     items: [trackingProduct],
     totalPrice: selectedVariant?.price,
   });
+  const savings = getSavings(selectedVariant);
 
   return (
     <article className="pilot-pdp">
@@ -154,6 +155,13 @@ export default function Product() {
           <p className="pilot-kicker">Handmade with love</p>
           <h1>{product.title}</h1>
           <ReviewBadge summary={reviewSummary} />
+
+          {selectedVariant?.availableForSale ? (
+            <p className="pilot-stock">In stock · Ready for checkout</p>
+          ) : (
+            <p className="pilot-stock is-muted">Currently sold out</p>
+          )}
+
           <div className="pilot-price-row">
             {selectedVariant?.price && <Money data={selectedVariant.price} />}
             {selectedVariant?.compareAtPrice && (
@@ -161,7 +169,13 @@ export default function Product() {
                 <Money data={selectedVariant.compareAtPrice} />
               </span>
             )}
+            {savings ? (
+              <span className="pilot-discount">{savings.percent}% off</span>
+            ) : null}
           </div>
+          <p className="pilot-tax-note">
+            Inclusive of all taxes · Free delivery across India
+          </p>
 
           <PilotProductForm
             productOptions={productOptions}
@@ -171,9 +185,25 @@ export default function Product() {
           />
 
           <div className="pilot-trust-strip">
-            <span>Free delivery across India</span>
-            <span>COD available</span>
-            <span>Secure Shopify checkout</span>
+            <span>
+              <strong>Free delivery</strong>
+              Across India
+            </span>
+            <span>
+              <strong>COD available</strong>
+              Pay at delivery on eligible pin codes
+            </span>
+            <span>
+              <strong>Secure checkout</strong>
+              Shopify-powered order flow
+            </span>
+          </div>
+
+          <div className="pilot-highlights">
+            <span>Hand-painted</span>
+            <span>Statement gifting</span>
+            <span>Festive ready</span>
+            <span>Lightweight styling</span>
           </div>
 
           <div className="pilot-copy">
@@ -452,6 +482,17 @@ function getReviewSummary(product: any): ReviewSummary | null {
     rating,
     ratingCount,
     reviewCount: product.razorpayReviewCount?.value,
+  };
+}
+
+function getSavings(selectedVariant: any) {
+  const price = Number(selectedVariant?.price?.amount);
+  const compareAtPrice = Number(selectedVariant?.compareAtPrice?.amount);
+  if (!price || !compareAtPrice || compareAtPrice <= price) return null;
+
+  return {
+    amount: compareAtPrice - price,
+    percent: Math.round(((compareAtPrice - price) / compareAtPrice) * 100),
   };
 }
 

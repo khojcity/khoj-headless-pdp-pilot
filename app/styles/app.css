@@ -265,10 +265,10 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-product-grid {
   display: grid;
-  gap: 24px;
+  gap: 28px;
   margin: 0 auto;
   max-width: 1180px;
-  padding: 16px;
+  padding: 18px;
 }
 
 .pilot-media-main {
@@ -316,7 +316,8 @@ button.reset:hover:not(:has(> *)) {
   align-self: start;
   background: #fff;
   border: 1px solid #e4e4dc;
-  padding: 22px;
+  box-shadow: 0 18px 46px rgba(21, 31, 22, 0.06);
+  padding: 24px;
 }
 
 .pilot-kicker {
@@ -329,19 +330,30 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .pilot-product-panel h1 {
-  font-size: clamp(1.7rem, 5vw, 3.1rem);
+  font-size: clamp(1.75rem, 4.2vw, 2.8rem);
   line-height: 1.06;
   margin: 0 0 12px;
+}
+
+.pilot-stock {
+  color: #0f7c43;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 12px 0 0;
+}
+
+.pilot-stock.is-muted {
+  color: #687768;
 }
 
 .pilot-price-row {
   align-items: baseline;
   display: flex;
   flex-wrap: wrap;
-  font-size: 1.35rem;
+  font-size: 1.55rem;
   font-weight: 800;
   gap: 10px;
-  margin: 18px 0;
+  margin: 14px 0 4px;
 }
 
 .pilot-compare {
@@ -349,6 +361,22 @@ button.reset:hover:not(:has(> *)) {
   font-size: 1rem;
   font-weight: 500;
   text-decoration: line-through;
+}
+
+.pilot-discount {
+  background: #f12b2b;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 5px 8px;
+  text-transform: uppercase;
+}
+
+.pilot-tax-note {
+  color: #687768;
+  font-size: 0.92rem;
+  margin: 0 0 18px;
 }
 
 .pilot-reviews {
@@ -407,6 +435,7 @@ button.reset:hover:not(:has(> *)) {
   display: grid;
   gap: 10px;
   grid-template-columns: 1fr;
+  margin-top: 16px;
 }
 
 .pilot-button {
@@ -438,14 +467,39 @@ button.reset:hover:not(:has(> *)) {
 .pilot-trust-strip {
   border-top: 1px solid #e4e4dc;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin-top: 20px;
-  padding-top: 16px;
+  padding-top: 18px;
 }
 
 .pilot-trust-strip span {
+  background: #f8faf6;
+  border: 1px solid #e4eadd;
   color: #596858;
+  display: grid;
   font-size: 0.95rem;
+  gap: 2px;
+  padding: 12px;
+}
+
+.pilot-trust-strip strong {
+  color: #142016;
+  font-size: 0.92rem;
+}
+
+.pilot-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pilot-highlights span {
+  border: 1px solid #dfe5dc;
+  color: #3f503d;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 7px 10px;
 }
 
 .pilot-copy,
@@ -537,7 +591,7 @@ button.reset:hover:not(:has(> *)) {
 
 @media (min-width: 760px) {
   .pilot-product-grid {
-    grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+    grid-template-columns: minmax(0, 1.05fr) minmax(390px, 0.95fr);
     padding: 28px;
   }
 
@@ -548,6 +602,10 @@ button.reset:hover:not(:has(> *)) {
 
   .pilot-actions {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .pilot-trust-strip {
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .pilot-related-grid {
@@ -984,9 +1042,9 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .pilot-cart {
-  max-width: 1120px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 48px 24px 72px;
+  padding: 40px 24px 72px;
 }
 
 .pilot-cart-header {
@@ -994,7 +1052,7 @@ button.reset:hover:not(:has(> *)) {
   justify-content: space-between;
   align-items: flex-start;
   gap: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 26px;
 }
 
 .pilot-cart-header h1,
@@ -1024,8 +1082,8 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  gap: 20px;
   align-items: start;
 }
 
@@ -1036,14 +1094,14 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart-line {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  gap: 18px;
-  padding: 16px;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 16px;
+  padding: 14px;
 }
 
 .pilot-cart-line img {
-  width: 120px;
-  height: 120px;
+  width: 108px;
+  height: 108px;
   object-fit: cover;
 }
 
@@ -1090,10 +1148,10 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart-summary {
   position: sticky;
-  top: 24px;
+  top: 88px;
   display: grid;
-  gap: 18px;
-  padding: 24px;
+  gap: 16px;
+  padding: 22px;
 }
 
 .pilot-cart-summary dl {
@@ -1121,6 +1179,12 @@ button.reset:hover:not(:has(> *)) {
   margin: 0;
   color: #687768;
   line-height: 1.5;
+}
+
+.pilot-cart-summary .pilot-button {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
 }
 
 @media (max-width: 760px) {
