@@ -164,9 +164,14 @@ export default function Product() {
         <ProductMedia media={product.media.nodes} title={product.title} />
 
         <div className="pilot-product-panel">
-          <p className="pilot-kicker">Handmade with love</p>
-          <h1>{product.title}</h1>
-          <ReviewBadge summary={reviewSummary} />
+          <div className="pilot-title-block">
+            <p className="pilot-kicker">Hand-painted jewellery</p>
+            <h1>{product.title}</h1>
+            <p>
+              Peacock-inspired necklace set for sarees, kurtis, festive looks,
+              and gifting.
+            </p>
+          </div>
 
           {selectedVariant?.availableForSale ? (
             <p className="pilot-stock">In stock · Ready for checkout</p>
@@ -174,56 +179,72 @@ export default function Product() {
             <p className="pilot-stock is-muted">Currently sold out</p>
           )}
 
-          <div className="pilot-price-row">
-            {selectedVariant?.price && <Money data={selectedVariant.price} />}
-            {selectedVariant?.compareAtPrice && (
-              <span className="pilot-compare">
-                <Money data={selectedVariant.compareAtPrice} />
-              </span>
-            )}
-            {savings ? (
-              <span className="pilot-discount">{savings.percent}% off</span>
-            ) : null}
-          </div>
-          <p className="pilot-tax-note">
-            Inclusive of all taxes · Free delivery across India
-          </p>
+          <div className="pilot-commerce-card">
+            <ReviewBadge summary={reviewSummary} />
 
-          <PilotProductForm
-            productOptions={productOptions}
-            selectedVariant={selectedVariant}
-            addToCartTracking={addToCartTracking}
-            checkoutTracking={checkoutTracking}
-          />
-
-          <div className="pilot-trust-strip">
-            <span>
-              <strong>Free delivery</strong>
-              Across India
-            </span>
-            <span>
-              <strong>COD available</strong>
-              Pay at delivery on eligible pin codes
-            </span>
-            <span>
-              <strong>Secure checkout</strong>
-              Shopify-powered order flow
-            </span>
-          </div>
-
-          <div className="pilot-highlights">
-            <span>Hand-painted</span>
-            <span>Statement gifting</span>
-            <span>Festive ready</span>
-            <span>Lightweight styling</span>
-          </div>
-
-          <div className="pilot-copy">
-            <p>
-              Mor Pankh Classic is a handmade, hand-painted necklace set crafted
-              for festive outfits, sarees, kurtis, gifting, and everyday
-              statement wear.
+            <div className="pilot-price-row">
+              {selectedVariant?.price && <Money data={selectedVariant.price} />}
+              {selectedVariant?.compareAtPrice && (
+                <span className="pilot-compare">
+                  <Money data={selectedVariant.compareAtPrice} />
+                </span>
+              )}
+              {savings ? (
+                <span className="pilot-discount">{savings.percent}% off</span>
+              ) : null}
+            </div>
+            <p className="pilot-tax-note">
+              Inclusive of all taxes · Free delivery across India
             </p>
+
+            <PilotProductForm
+              productOptions={productOptions}
+              selectedVariant={selectedVariant}
+              addToCartTracking={addToCartTracking}
+              checkoutTracking={checkoutTracking}
+            />
+
+            <div className="pilot-checkout-notes" aria-label="Checkout benefits">
+              <span>Cash on delivery available</span>
+              <span>Secure Shopify checkout</span>
+              <span>Ships across India</span>
+            </div>
+          </div>
+
+          <div className="pilot-assurance">
+            <div>
+              <span>Delivery</span>
+              <strong>Free delivery</strong>
+              <p>Across India, with shipping confirmed at checkout.</p>
+            </div>
+            <div>
+              <span>Payment</span>
+              <strong>COD and prepaid</strong>
+              <p>Use the payment option that feels comfortable.</p>
+            </div>
+            <div>
+              <span>Craft</span>
+              <strong>Handmade finish</strong>
+              <p>Painted and assembled in small batches.</p>
+            </div>
+          </div>
+
+          <div className="pilot-highlight-panel">
+            <h2>Why it works</h2>
+            <ul>
+              <li>
+                <strong>Statement without bulk</strong>
+                <span>Designed to sit comfortably with festive outfits.</span>
+              </li>
+              <li>
+                <strong>Gift-ready colour</strong>
+                <span>Peacock blue and green tones pair easily with Indian wear.</span>
+              </li>
+              <li>
+                <strong>Hand-painted detail</strong>
+                <span>Each piece carries visible handmade variation.</span>
+              </li>
+            </ul>
           </div>
 
           <ProductDetails descriptionHtml={product.descriptionHtml} />
@@ -244,9 +265,12 @@ export default function Product() {
       <RelatedProducts recommendations={recommendations} />
 
       <div className="pilot-sticky-atc">
-        <span>
-          {selectedVariant?.price && <Money data={selectedVariant.price} />}
-        </span>
+        <div>
+          <span>
+            {selectedVariant?.price && <Money data={selectedVariant.price} />}
+          </span>
+          <small>Free delivery</small>
+        </div>
         <AddToCartButton
           className="pilot-button pilot-button-primary"
           disabled={!selectedVariant?.availableForSale}
@@ -308,6 +332,7 @@ function ProductMedia({media, title}: {media: any[]; title: string}) {
             aspectRatio="1/1"
           />
         ) : null}
+        <span className="pilot-media-badge">Hand-painted set</span>
       </div>
 
       {media.length > 1 && (
