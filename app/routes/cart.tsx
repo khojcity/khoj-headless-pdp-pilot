@@ -186,11 +186,6 @@ export default function Cart() {
 
             <aside className="pilot-cart-summary">
               <h2>Price breakdown</h2>
-              <div className="pilot-cart-offer">
-                <strong>Apply coupon</strong>
-                <span>Discount codes are validated by Shopify checkout.</span>
-                <CartDiscountForm discountCodes={cart?.discountCodes || []} />
-              </div>
               <dl>
                 <div>
                   <dt>MRP</dt>
@@ -235,6 +230,12 @@ export default function Cart() {
                   Proceed to checkout
                 </a>
               ) : null}
+
+              <div className="pilot-cart-offer">
+                <strong>Apply coupon</strong>
+                <span>Discount codes are validated by Shopify checkout.</span>
+                <CartDiscountForm discountCodes={cart?.discountCodes || []} />
+              </div>
 
               <div className="pilot-cart-trust">
                 <span>COD available</span>

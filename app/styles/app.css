@@ -1252,17 +1252,17 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart {
   background: #fbfbf7;
-  max-width: 680px;
+  max-width: 640px;
   margin: 0 auto;
   min-height: calc(100vh - 96px);
-  padding: 22px 14px 92px;
+  padding: 20px 12px 72px;
   width: 100%;
 }
 
 .pilot-cart-header {
   display: grid;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 12px;
   text-align: left;
 }
 
@@ -1281,7 +1281,7 @@ button.reset:hover:not(:has(> *)) {
 .pilot-cart-header p:not(.pilot-kicker) {
   color: #596858;
   line-height: 1.5;
-  margin: 10px 0 0;
+  margin: 6px 0 0;
 }
 
 .pilot-cart-header a {
@@ -1309,16 +1309,16 @@ button.reset:hover:not(:has(> *)) {
 .pilot-cart-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
   align-items: start;
   min-width: 0;
 }
 
 .pilot-cart-progress {
   display: grid;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding: 14px 16px;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
 }
 
 .pilot-cart-progress strong {
@@ -1350,7 +1350,7 @@ button.reset:hover:not(:has(> *)) {
   display: grid;
   gap: 0;
   min-width: 0;
-  padding: 16px;
+  padding: 14px;
 }
 
 .pilot-cart-section-heading {
@@ -1358,8 +1358,8 @@ button.reset:hover:not(:has(> *)) {
   border-bottom: 1px solid #ece8de;
   display: flex;
   justify-content: space-between;
-  margin: 0 0 14px;
-  padding-bottom: 12px;
+  margin: 0 0 12px;
+  padding-bottom: 10px;
 }
 
 .pilot-cart-section-heading h2 {
@@ -1375,16 +1375,16 @@ button.reset:hover:not(:has(> *)) {
 .pilot-cart-line {
   display: grid;
   border: 0;
-  grid-template-columns: 124px minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 14px;
   min-width: 0;
   padding: 0;
 }
 
 .pilot-cart-line img {
   background: #f4f1e9;
-  width: 118px;
-  height: 118px;
+  width: 112px;
+  height: 112px;
   object-fit: cover;
 }
 
@@ -1475,18 +1475,18 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart-summary {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
-  padding: 18px 16px;
+  padding: 16px 14px;
 }
 
 .pilot-cart-offer {
   background: #f3f6ef;
   border: 1px solid #e1e8dc;
   display: grid;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
-  padding: 12px;
+  padding: 12px 14px;
 }
 
 .pilot-cart-offer strong {
@@ -1539,7 +1539,7 @@ button.reset:hover:not(:has(> *)) {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  padding: 11px 0;
+  padding: 9px 0;
 }
 
 .pilot-cart-summary dl > div:first-child {
@@ -1575,7 +1575,7 @@ button.reset:hover:not(:has(> *)) {
   background: #fff4df;
   color: #7a4d00;
   font-weight: 800;
-  padding: 10px 12px;
+  padding: 9px 12px;
 }
 
 .pilot-cart-summary p {
@@ -1593,9 +1593,10 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart-trust {
   color: #596858;
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   font-size: 0.86rem;
-  gap: 6px;
+  gap: 6px 14px;
 }
 
 .pilot-cart-trust span::before {
@@ -1779,7 +1780,7 @@ button.reset:hover:not(:has(> *)) {
     margin: 0 auto;
     max-width: 440px;
     overflow-x: hidden;
-    padding: 16px 10px 108px;
+    padding: 12px 10px 92px;
   }
 
   .pilot-cart-header,
@@ -1790,15 +1791,17 @@ button.reset:hover:not(:has(> *)) {
   }
 
   .pilot-cart-header {
-    gap: 12px;
-    margin-bottom: 14px;
+    gap: 8px;
+    margin-bottom: 10px;
   }
 
   .pilot-cart-header h1 {
-    font-size: 2rem;
+    font-size: 1.75rem;
   }
 
   .pilot-cart-header p:not(.pilot-kicker) {
+    font-size: 0.95rem;
+    line-height: 1.45;
     max-width: 30rem;
   }
 
@@ -1807,29 +1810,29 @@ button.reset:hover:not(:has(> *)) {
   }
 
   .pilot-cart-progress {
-    margin-bottom: 10px;
-    padding: 12px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
     width: 100%;
   }
 
   .pilot-cart-lines {
-    padding: 14px;
+    padding: 12px;
   }
 
   .pilot-cart-section-heading {
-    margin: 0 0 12px;
-    padding-bottom: 10px;
+    margin: 0 0 10px;
+    padding-bottom: 8px;
   }
 
   .pilot-cart-line {
-    grid-template-columns: 92px minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: 86px minmax(0, 1fr);
+    gap: 10px;
     width: 100%;
   }
 
   .pilot-cart-line img {
-    height: 104px;
-    width: 92px;
+    height: 92px;
+    width: 86px;
   }
 
   .pilot-cart-line-title {
@@ -1842,7 +1845,7 @@ button.reset:hover:not(:has(> *)) {
   }
 
   .pilot-cart-line-body {
-    gap: 9px;
+    gap: 7px;
   }
 
   .pilot-cart-line-body > p,
@@ -1867,14 +1870,14 @@ button.reset:hover:not(:has(> *)) {
 
   .pilot-cart-summary {
     border: 1px solid #e1ddd2;
-    gap: 12px;
+    gap: 9px;
     position: static;
-    padding: 16px 14px;
+    padding: 12px;
     width: 100%;
   }
 
   .pilot-cart-offer {
-    padding: 12px;
+    padding: 10px;
   }
 
   .pilot-cart-offer span {
