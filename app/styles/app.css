@@ -1561,6 +1561,8 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-checkout-form {
   margin: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 .pilot-checkout-form .pilot-button {
@@ -1596,7 +1598,7 @@ button.reset:hover:not(:has(> *)) {
   padding: 10px 12px max(10px, env(safe-area-inset-bottom));
   position: fixed;
   transform: translateX(-50%);
-  width: min(100vw, 640px);
+  width: min(100vw, 664px);
   z-index: 7;
 }
 
