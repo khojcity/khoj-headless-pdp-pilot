@@ -373,7 +373,6 @@ function getCartSummary(cart: any, lines: any[]) {
 
 function AutomaticDiscountLadder({subtotal}: {subtotal: number}) {
   const tiers = [
-    {label: '₹0-499', discount: 'No discount', min: 0},
     {label: '₹500-999', discount: '5% off', min: 500},
     {label: '₹1000-1499', discount: '10% off', min: 1000},
     {label: '₹1500-1999', discount: '15% off', min: 1500},
@@ -389,13 +388,17 @@ function AutomaticDiscountLadder({subtotal}: {subtotal: number}) {
     <div className="pilot-cart-ladder" aria-label="Automatic discount tiers">
       <strong>Automatic discount applied</strong>
       <span>
-        Current tier: {activeTier.discount}. Higher order values unlock bigger
-        savings.
+        Current tier: {subtotal >= 500 ? activeTier.discount : 'unlocked above ₹500'}.
+        Higher cart values unlock bigger savings.
       </span>
       <div>
         {tiers.map((tier) => (
           <span
-            className={tier.min === activeTier.min ? 'is-active' : undefined}
+            className={
+              subtotal >= tier.min && tier.min === activeTier.min
+                ? 'is-active'
+                : undefined
+            }
             key={tier.label}
           >
             {tier.label}

@@ -1508,7 +1508,7 @@ button.reset:hover:not(:has(> *)) {
 .pilot-cart-ladder > div {
   display: grid;
   gap: 4px;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .pilot-cart-ladder > div > span {
@@ -1931,7 +1931,18 @@ button.reset:hover:not(:has(> *)) {
   }
 
   .pilot-cart-ladder > div {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .pilot-cart-ladder > div > span {
+    font-size: 0.55rem;
+    padding: 5px 2px;
+    white-space: nowrap;
+  }
+
+  .pilot-cart-ladder b {
+    font-size: 0.62rem;
   }
 
   .pilot-cart-summary dl > div {
@@ -1948,7 +1959,15 @@ button.reset:hover:not(:has(> *)) {
   }
 
   .pilot-cart-trust {
-    grid-template-columns: 1fr;
+    flex-wrap: nowrap;
+    font-size: 0.72rem;
+    gap: 4px;
+    justify-content: space-between;
+    white-space: nowrap;
+  }
+
+  .pilot-cart-trust span::before {
+    margin-right: 3px;
   }
 
   .pilot-cart-sticky {
