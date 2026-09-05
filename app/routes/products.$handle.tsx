@@ -562,12 +562,14 @@ function RelatedProducts({recommendations}: {recommendations: Promise<any>}) {
                     key={product.id}
                   >
                     {product.featuredImage && (
-                      <Image
-                        data={product.featuredImage}
-                        alt={product.featuredImage.altText || product.title}
-                        sizes="(min-width: 900px) 20vw, 45vw"
-                        loading="lazy"
-                      />
+                      <div className="pilot-related-media">
+                        <Image
+                          data={product.featuredImage}
+                          alt={product.featuredImage.altText || product.title}
+                          sizes="(min-width: 900px) 18vw, 45vw"
+                          loading="lazy"
+                        />
+                      </div>
                     )}
                     <span>{product.title}</span>
                     <small>

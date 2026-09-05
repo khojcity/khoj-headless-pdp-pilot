@@ -763,10 +763,25 @@ button.reset:hover:not(:has(> *)) {
   text-decoration: none;
 }
 
-.pilot-related-grid img {
+.pilot-related-media {
+  align-items: center;
   aspect-ratio: 1 / 1;
+  background: #f6f3ec;
   border-radius: 0;
-  object-fit: cover;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  width: 100%;
+}
+
+.pilot-related-media picture {
+  display: contents;
+}
+
+.pilot-related-media img {
+  border-radius: 0;
+  height: 100%;
+  object-fit: contain;
   width: 100%;
 }
 
