@@ -229,6 +229,19 @@ export default function Product() {
             </div>
           </div>
 
+          <InfographicStrip
+            images={[
+              {
+                src: '/infographics/crafted-by-hand.jpg',
+                alt: 'Crafted by hand. Each piece is painted and finished in small batches.',
+              },
+              {
+                src: '/infographics/style-ready.jpg',
+                alt: 'Style-ready. Pairs beautifully with sarees, kurtis, and festive looks.',
+              },
+            ]}
+          />
+
           <div className="pilot-highlight-panel">
             <h2>Why it works</h2>
             <ul>
@@ -261,6 +274,16 @@ export default function Product() {
           lightweight construction, and an easy saree-to-kurti styling range.
         </p>
       </section>
+
+      <InfographicStrip
+        className="pilot-infographics-wide"
+        images={[
+          {
+            src: '/infographics/free-delivery-cod.jpg',
+            alt: 'Free delivery and COD. Shop comfortably with delivery across India.',
+          },
+        ]}
+      />
 
       <RelatedProducts recommendations={recommendations} />
 
@@ -302,6 +325,31 @@ export default function Product() {
         }}
       />
     </article>
+  );
+}
+
+function InfographicStrip({
+  className = '',
+  images,
+}: {
+  className?: string;
+  images: Array<{src: string; alt: string}>;
+}) {
+  return (
+    <section
+      className={`pilot-infographics ${className}`}
+      aria-label="Khoj shopping benefits"
+    >
+      {images.map((image) => (
+        <img
+          alt={image.alt}
+          decoding="async"
+          key={image.src}
+          loading="lazy"
+          src={image.src}
+        />
+      ))}
+    </section>
   );
 }
 

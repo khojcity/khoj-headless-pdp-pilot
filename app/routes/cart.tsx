@@ -198,6 +198,8 @@ export default function Cart() {
             </div>
           </section>
 
+          <CartInfographics />
+
           <section className="pilot-cart-layout">
             <div className="pilot-cart-lines">
               <div className="pilot-cart-section-heading">
@@ -283,6 +285,28 @@ export default function Cart() {
         </>
       )}
     </main>
+  );
+}
+
+function CartInfographics() {
+  return (
+    <section
+      className="pilot-cart-infographics"
+      aria-label="Khoj cart benefits"
+    >
+      <img
+        alt="Automatic savings. Discounts apply automatically based on your cart value."
+        decoding="async"
+        loading="lazy"
+        src="/infographics/automatic-savings.jpg"
+      />
+      <img
+        alt="Free delivery and COD. Shop comfortably with delivery across India."
+        decoding="async"
+        loading="lazy"
+        src="/infographics/free-delivery-cod.jpg"
+      />
+    </section>
   );
 }
 
