@@ -115,6 +115,7 @@ export default function Product() {
       handle: product.handle,
       url: LIVE_PRODUCT_URL,
       title: product.title,
+      productType: product.productType,
       variantTitle: selectedVariant?.title || '',
       vendor: product.vendor,
       price: selectedVariant?.price,
@@ -124,6 +125,7 @@ export default function Product() {
       product.handle,
       product.id,
       product.title,
+      product.productType,
       product.vendor,
       selectedVariant?.id,
       selectedVariant?.price,
@@ -700,6 +702,7 @@ const PRODUCT_FRAGMENT = `#graphql
   fragment Product on Product {
     id
     title
+    productType
     vendor
     handle
     descriptionHtml

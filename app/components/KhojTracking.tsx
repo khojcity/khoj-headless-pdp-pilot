@@ -20,6 +20,7 @@ type TrackProduct = {
   handle?: string;
   url?: string;
   title: string;
+  productType?: string;
   variantTitle?: string;
   vendor?: string;
   price?: Money | null;
@@ -145,7 +146,7 @@ function cleanParams(params: Record<string, unknown>) {
 }
 
 function productContent(product: TrackProduct) {
-  const id = product.variantId || product.id;
+  const id = shopifyNumericId(product.variantId || product.id);
   return cleanParams({
     id,
     quantity: product.quantity || 1,
@@ -163,14 +164,21 @@ function metaProductParams(event: TrackEvent) {
     }, 0);
 
   return cleanParams({
-    content_ids: items.map((item) => item.variantId || item.id).filter(Boolean),
+    content_ids: items
+      .map((item) => shopifyNumericId(item.variantId || item.id))
+      .filter(Boolean),
     content_name: event.product?.title || items[0]?.title,
+    content_category: event.product?.productType || items[0]?.productType,
     content_type: 'product',
     contents: items.map(productContent),
     value,
     currency:
       event.totalPrice?.currencyCode || items[0]?.price?.currencyCode || 'INR',
   });
+}
+
+function shopifyNumericId(id?: string) {
+  return id?.split('/').pop() || id;
 }
 
 function trackMetaPixelActivity(event: TrackEvent) {
