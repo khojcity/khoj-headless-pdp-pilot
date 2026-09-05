@@ -338,13 +338,19 @@ type KnownCheckoutProfile = {
 async function loadKnownCheckoutProfile(request: Request, env: Env) {
   const endpoint = env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT;
   const token = env.PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN;
-  if (!endpoint || !token) return null;
+  if (!endpoint || !token) {
+    console.warn('Khoj checkout prefill skipped: missing endpoint or token');
+    return null;
+  }
 
   const cookies = parseCookieHeader(request.headers.get('Cookie') || '');
   const visitorId = cookies.khoj_visitor_id || '';
   const deviceId = cookies.khoj_device_id || '';
   const visitorCustomerId = cookies.khoj_visitor_customer_id || '';
-  if (!visitorId && !visitorCustomerId) return null;
+  if (!visitorId && !visitorCustomerId) {
+    console.warn('Khoj checkout prefill skipped: missing visitor cookies');
+    return null;
+  }
 
   const url = endpoint.replace(/\/site-activity\/?$/, '/site-activity/checkout-prefill');
   try {
@@ -358,14 +364,30 @@ async function loadKnownCheckoutProfile(request: Request, env: Env) {
         visitor: visitorCustomerId ? {id: visitorCustomerId} : undefined,
       }),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.warn('Khoj checkout prefill lookup failed', {
+        status: response.status,
+      });
+      return null;
+    }
     const payload = (await response.json()) as KnownCheckoutProfile & {
       found?: boolean;
       success?: boolean;
+      reason?: string;
+      has_address?: boolean;
     };
+    console.info('Khoj checkout prefill lookup result', {
+      success: payload.success,
+      found: payload.found,
+      reason: payload.reason || '',
+      hasAddress: payload.has_address || Boolean(payload.address?.address1),
+      hasEmail: Boolean(payload.email),
+      hasPhone: Boolean(payload.phone),
+    });
     if (!payload.success || !payload.found) return null;
     return payload;
-  } catch {
+  } catch (error) {
+    console.warn('Khoj checkout prefill lookup error', error);
     return null;
   }
 }
@@ -378,9 +400,24 @@ async function prepareKnownVisitorCheckout(
   const profile = await loadKnownCheckoutProfile(request, context.env);
   if (!profile) return currentCart;
 
+  const buyerIdentity = knownCheckoutProfileToBuyerIdentity(profile);
+  console.info('Khoj checkout prefill applying buyer identity', {
+    hasEmail: Boolean(buyerIdentity.email),
+    hasPhone: Boolean(buyerIdentity.phone),
+    hasAddress: Boolean(
+      (buyerIdentity.deliveryAddressPreferences as any)?.[0]?.deliveryAddress
+        ?.address1,
+    ),
+  });
   const result = await context.cart.updateBuyerIdentity(
-    knownCheckoutProfileToBuyerIdentity(profile) as any,
+    buyerIdentity as any,
   );
+  if (result.errors?.length || result.warnings?.length) {
+    console.warn('Khoj checkout prefill cart update returned issues', {
+      errors: result.errors,
+      warnings: result.warnings,
+    });
+  }
   return result.cart || currentCart;
 }
 
