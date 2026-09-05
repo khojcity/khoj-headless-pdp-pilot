@@ -163,8 +163,8 @@ export default function Cart() {
         <>
           <section className="pilot-cart-progress" aria-label="Delivery reward">
             <div>
-              <strong>Free delivery unlocked</strong>
-              <span>No extra shipping charge on this order.</span>
+              <strong>Free delivery + automatic savings</strong>
+              <span>Discounts are applied automatically based on cart value.</span>
             </div>
             <div className="pilot-cart-progress-bar">
               <span />
@@ -231,11 +231,7 @@ export default function Cart() {
                 </a>
               ) : null}
 
-              <div className="pilot-cart-offer">
-                <strong>Apply coupon</strong>
-                <span>Discount codes are validated by Shopify checkout.</span>
-                <CartDiscountForm discountCodes={cart?.discountCodes || []} />
-              </div>
+              <AutomaticDiscountLadder subtotal={summary.compareAtTotal} />
 
               <div className="pilot-cart-trust">
                 <span>COD available</span>
@@ -356,37 +352,6 @@ function CartQuantityButton({
   );
 }
 
-function CartDiscountForm({
-  discountCodes,
-}: {
-  discountCodes: Array<{code: string; applicable: boolean}>;
-}) {
-  const appliedCodes = discountCodes.filter((code) => code.applicable);
-
-  return (
-    <CartForm
-      route="/cart"
-      action={CartForm.ACTIONS.DiscountCodesUpdate}
-      inputs={{discountCodes: appliedCodes.map((code) => code.code)}}
-    >
-      <div className="pilot-cart-coupon">
-        <input
-          name="discountCode"
-          placeholder="Discount code"
-          type="text"
-          aria-label="Discount code"
-        />
-        <button type="submit">Apply</button>
-      </div>
-      {appliedCodes.length ? (
-        <p>
-          Applied: {appliedCodes.map((code) => code.code).join(', ')}
-        </p>
-      ) : null}
-    </CartForm>
-  );
-}
-
 function getCartSummary(cart: any, lines: any[]) {
   const subtotal = Number(cart?.cost?.subtotalAmount?.amount || 0);
   const compareAtTotal = lines.reduce((total, line) => {
@@ -404,6 +369,42 @@ function getCartSummary(cart: any, lines: any[]) {
     compareAtTotal: Math.max(compareAtTotal, subtotal),
     savings: Math.max(0, compareAtTotal - subtotal),
   };
+}
+
+function AutomaticDiscountLadder({subtotal}: {subtotal: number}) {
+  const tiers = [
+    {label: '₹0-499', discount: 'No discount', min: 0},
+    {label: '₹500-999', discount: '5% off', min: 500},
+    {label: '₹1000-1499', discount: '10% off', min: 1000},
+    {label: '₹1500-1999', discount: '15% off', min: 1500},
+    {label: '₹2000+', discount: '20% off', min: 2000},
+  ];
+
+  const activeTier = tiers.reduce(
+    (active, tier) => (subtotal >= tier.min ? tier : active),
+    tiers[0],
+  );
+
+  return (
+    <div className="pilot-cart-ladder" aria-label="Automatic discount tiers">
+      <strong>Automatic discount applied</strong>
+      <span>
+        Current tier: {activeTier.discount}. Higher order values unlock bigger
+        savings.
+      </span>
+      <div>
+        {tiers.map((tier) => (
+          <span
+            className={tier.min === activeTier.min ? 'is-active' : undefined}
+            key={tier.label}
+          >
+            {tier.label}
+            <b>{tier.discount}</b>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function formatRupees(amount: number) {
