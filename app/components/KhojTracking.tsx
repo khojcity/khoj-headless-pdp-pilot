@@ -6,6 +6,7 @@ const VISITOR_CUSTOMER_COOKIE = 'khoj_visitor_customer_id';
 const OPPREF_COOKIE = 'khoj_oppref';
 const OBREF_COOKIE = 'khoj_obref';
 const COOKIE_MAX_AGE_SECONDS = 15552000;
+const SHARED_COOKIE_DOMAIN = '.khoj.city';
 
 type Money = {
   amount: string;
@@ -48,7 +49,12 @@ function readCookie(name: string) {
 }
 
 function writeCookie(name: string, value: string) {
-  document.cookie = `${name}=${encodeURIComponent(value)}; Max-Age=${COOKIE_MAX_AGE_SECONDS}; Path=/; SameSite=Lax; Secure`;
+  const domain =
+    window.location.hostname === 'khoj.city' ||
+    window.location.hostname.endsWith('.khoj.city')
+      ? `; Domain=${SHARED_COOKIE_DOMAIN}`
+      : '';
+  document.cookie = `${name}=${encodeURIComponent(value)}; Max-Age=${COOKIE_MAX_AGE_SECONDS}; Path=/; SameSite=Lax; Secure${domain}`;
 }
 
 function stableCookie(name: string) {
