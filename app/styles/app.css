@@ -1602,6 +1602,14 @@ button.reset:hover:not(:has(> *)) {
   width: 100%;
 }
 
+.pilot-checkout-form {
+  margin: 0;
+}
+
+.pilot-checkout-form .pilot-button {
+  width: 100%;
+}
+
 .pilot-cart-trust {
   color: #596858;
   display: flex;
@@ -1654,6 +1662,10 @@ button.reset:hover:not(:has(> *)) {
   min-height: 52px;
   place-items: center;
   text-decoration: none;
+}
+
+.pilot-cart-sticky .pilot-checkout-form {
+  width: 100%;
 }
 
 @media (max-width: 760px) {

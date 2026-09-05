@@ -1,4 +1,11 @@
-import {useLoaderData, Link, data, type HeadersFunction} from 'react-router';
+import {
+  useLoaderData,
+  Link,
+  Form,
+  data,
+  redirect,
+  type HeadersFunction,
+} from 'react-router';
 import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm, Image, Money} from '@shopify/hydrogen';
@@ -14,6 +21,26 @@ export async function action({request, context}: Route.ActionArgs) {
   const {cart} = context;
 
   const formData = await request.formData();
+  const intent = String(formData.get('_intent') || '');
+
+  if (intent === 'prepareCheckout') {
+    const currentCart = await cart.get();
+    if (!currentCart?.checkoutUrl) {
+      return redirect('/cart');
+    }
+
+    const profile = await loadKnownCheckoutProfile(request, context.env);
+    let preparedCart = currentCart;
+
+    if (profile) {
+      const result = await cart.updateBuyerIdentity(
+        knownCheckoutProfileToBuyerIdentity(profile) as any,
+      );
+      preparedCart = result.cart || currentCart;
+    }
+
+    return redirect(preparedCart.checkoutUrl || currentCart.checkoutUrl);
+  }
 
   const {action, inputs} = CartForm.getFormInput(formData);
 
@@ -222,13 +249,10 @@ export default function Cart() {
               ) : null}
 
               {cart?.checkoutUrl ? (
-                <a
-                  className="pilot-button pilot-button-primary"
-                  href={cart.checkoutUrl}
-                  onClick={() => trackKhojActivity(checkoutTracking())}
-                >
-                  Proceed to checkout
-                </a>
+                <CheckoutForm
+                  checkoutTracking={checkoutTracking}
+                  label="Proceed to checkout"
+                />
               ) : null}
 
               <AutomaticDiscountLadder subtotal={summary.compareAtTotal} />
@@ -253,19 +277,139 @@ export default function Cart() {
                   )}
                 </strong>
               </div>
-              <a
-                className="pilot-button pilot-button-primary"
-                href={cart.checkoutUrl}
-                onClick={() => trackKhojActivity(checkoutTracking())}
-              >
-                Checkout
-              </a>
+              <CheckoutForm checkoutTracking={checkoutTracking} label="Checkout" />
             </div>
           ) : null}
         </>
       )}
     </main>
   );
+}
+
+function CheckoutForm({
+  checkoutTracking,
+  label,
+}: {
+  checkoutTracking: () => Parameters<typeof trackKhojActivity>[0];
+  label: string;
+}) {
+  return (
+    <Form
+      method="post"
+      className="pilot-checkout-form"
+      onSubmit={() => trackKhojActivity(checkoutTracking())}
+    >
+      <input type="hidden" name="_intent" value="prepareCheckout" />
+      <button className="pilot-button pilot-button-primary" type="submit">
+        {label}
+      </button>
+    </Form>
+  );
+}
+
+type KnownCheckoutProfile = {
+  email?: string;
+  phone?: string;
+  address?: {
+    firstName?: string;
+    lastName?: string;
+    company?: string;
+    address1?: string;
+    address2?: string;
+    city?: string;
+    province?: string;
+    provinceCode?: string;
+    country?: string;
+    countryCode?: string;
+    zip?: string;
+    phone?: string;
+  };
+};
+
+async function loadKnownCheckoutProfile(request: Request, env: Env) {
+  const endpoint = env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT;
+  const token = env.PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN;
+  if (!endpoint || !token) return null;
+
+  const cookies = parseCookieHeader(request.headers.get('Cookie') || '');
+  const visitorId = cookies.khoj_visitor_id || '';
+  const deviceId = cookies.khoj_device_id || '';
+  const visitorCustomerId = cookies.khoj_visitor_customer_id || '';
+  if (!visitorId && !visitorCustomerId) return null;
+
+  const url = endpoint.replace(/\/site-activity\/?$/, '/site-activity/checkout-prefill');
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        token,
+        visitor_id: visitorId,
+        device_id: deviceId,
+        visitor: visitorCustomerId ? {id: visitorCustomerId} : undefined,
+      }),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as KnownCheckoutProfile & {
+      found?: boolean;
+      success?: boolean;
+    };
+    if (!payload.success || !payload.found) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function knownCheckoutProfileToBuyerIdentity(profile: KnownCheckoutProfile) {
+  const address = removeEmptyValues(profile.address || {});
+  const buyerIdentity: Record<string, unknown> = {
+    countryCode: 'IN',
+  };
+  if (profile.email) buyerIdentity.email = profile.email;
+  if (profile.phone) buyerIdentity.phone = profile.phone;
+  if (address.address1) {
+    buyerIdentity.deliveryAddressPreferences = [
+      {
+        deliveryAddress: {
+          firstName: address.firstName,
+          lastName: address.lastName,
+          company: address.company,
+          address1: address.address1,
+          address2: address.address2,
+          city: address.city,
+          province: address.province,
+          country: address.country || 'India',
+          zip: address.zip,
+          phone: address.phone || profile.phone,
+        },
+      },
+    ];
+  }
+  return removeEmptyValues(buyerIdentity);
+}
+
+function removeEmptyValues<T extends Record<string, unknown>>(record: T) {
+  return Object.fromEntries(
+    Object.entries(record).filter(([, value]) => value !== undefined && value !== ''),
+  );
+}
+
+function parseCookieHeader(header: string) {
+  return Object.fromEntries(
+    header
+      .split(';')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const [name, ...value] = part.split('=');
+        try {
+          return [name, decodeURIComponent(value.join('='))];
+        } catch {
+          return [name, value.join('=')];
+        }
+      }),
+  ) as Record<string, string>;
 }
 
 function CartLine({line}: {line: any}) {
