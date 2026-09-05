@@ -1252,19 +1252,18 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart {
   background: #fbfbf7;
-  max-width: 1120px;
+  max-width: 680px;
   margin: 0 auto;
   min-height: calc(100vh - 96px);
-  padding: 22px 18px 92px;
+  padding: 22px 14px 92px;
   width: 100%;
 }
 
 .pilot-cart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 24px;
+  display: grid;
+  gap: 12px;
   margin-bottom: 16px;
+  text-align: left;
 }
 
 .pilot-cart-header h1,
@@ -1309,8 +1308,8 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(310px, 360px);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
   align-items: start;
   min-width: 0;
 }
@@ -1346,16 +1345,21 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .pilot-cart-lines {
+  background: #fff;
+  border: 1px solid #e1ddd2;
   display: grid;
-  gap: 10px;
+  gap: 0;
   min-width: 0;
+  padding: 16px;
 }
 
 .pilot-cart-section-heading {
   align-items: center;
+  border-bottom: 1px solid #ece8de;
   display: flex;
   justify-content: space-between;
-  margin-bottom: 2px;
+  margin: 0 0 14px;
+  padding-bottom: 12px;
 }
 
 .pilot-cart-section-heading h2 {
@@ -1370,10 +1374,11 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart-line {
   display: grid;
-  grid-template-columns: 118px minmax(0, 1fr);
-  gap: 14px;
-  padding: 14px;
+  border: 0;
+  grid-template-columns: 124px minmax(0, 1fr);
+  gap: 16px;
   min-width: 0;
+  padding: 0;
 }
 
 .pilot-cart-line img {
@@ -1469,12 +1474,10 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .pilot-cart-summary {
-  position: sticky;
-  top: 88px;
   display: grid;
   gap: 14px;
   min-width: 0;
-  padding: 18px;
+  padding: 18px 16px;
 }
 
 .pilot-cart-offer {
@@ -1809,29 +1812,18 @@ button.reset:hover:not(:has(> *)) {
     width: 100%;
   }
 
-  .pilot-cart-layout {
-    gap: 10px;
-  }
-
   .pilot-cart-lines {
-    background: #fff;
-    border: 1px solid #e1ddd2;
-    gap: 0;
-    min-width: 0;
     padding: 14px;
   }
 
   .pilot-cart-section-heading {
-    border-bottom: 1px solid #ece8de;
     margin: 0 0 12px;
     padding-bottom: 10px;
   }
 
   .pilot-cart-line {
-    border: 0;
     grid-template-columns: 92px minmax(0, 1fr);
     gap: 12px;
-    padding: 0;
     width: 100%;
   }
 
