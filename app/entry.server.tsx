@@ -20,8 +20,20 @@ export default async function handleRequest(
         context.env.PUBLIC_CHECKOUT_DOMAIN || context.env.PUBLIC_STORE_DOMAIN,
       storeDomain: context.env.PUBLIC_STORE_DOMAIN,
     },
-    scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.shopify.com', 'https://connect.facebook.net'],
-    connectSrc: ['https://www.facebook.com', 'https://connect.facebook.net'],
+    scriptSrc: [
+      "'self'",
+      "'unsafe-inline'",
+      'https://cdn.shopify.com',
+      'https://connect.facebook.net',
+    ],
+    connectSrc: [
+      'https://www.facebook.com',
+      'https://connect.facebook.net',
+      'https://*.facebook.com',
+      'https://*.run.app',
+      'https://*.on.aws',
+    ],
+    frameSrc: ['https://www.facebook.com', 'https://*.facebook.com'],
     imgSrc: [
       "'self'",
       'data:',
