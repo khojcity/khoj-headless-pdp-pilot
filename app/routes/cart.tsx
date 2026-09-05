@@ -29,16 +29,11 @@ export async function action({request, context}: Route.ActionArgs) {
       return redirect('/cart');
     }
 
-    const profile = await loadKnownCheckoutProfile(request, context.env);
-    let preparedCart = currentCart;
-
-    if (profile) {
-      const result = await cart.updateBuyerIdentity(
-        knownCheckoutProfileToBuyerIdentity(profile) as any,
-      );
-      preparedCart = result.cart || currentCart;
-    }
-
+    const preparedCart = await prepareKnownVisitorCheckout(
+      request,
+      context,
+      currentCart,
+    );
     return redirect(preparedCart.checkoutUrl || currentCart.checkoutUrl);
   }
 
@@ -106,8 +101,13 @@ export async function action({request, context}: Route.ActionArgs) {
 
   const redirectTo = formData.get('redirectTo') ?? null;
   if (redirectTo === 'checkout' && cartResult?.checkoutUrl) {
+    const preparedCart = await prepareKnownVisitorCheckout(
+      request,
+      context,
+      cartResult,
+    );
     status = 303;
-    headers.set('Location', cartResult.checkoutUrl);
+    headers.set('Location', preparedCart.checkoutUrl || cartResult.checkoutUrl);
   } else if (typeof redirectTo === 'string') {
     status = 303;
     headers.set('Location', redirectTo);
@@ -368,6 +368,20 @@ async function loadKnownCheckoutProfile(request: Request, env: Env) {
   } catch {
     return null;
   }
+}
+
+async function prepareKnownVisitorCheckout(
+  request: Request,
+  context: Route.ActionArgs['context'],
+  currentCart: NonNullable<Awaited<ReturnType<Route.ActionArgs['context']['cart']['get']>>>,
+) {
+  const profile = await loadKnownCheckoutProfile(request, context.env);
+  if (!profile) return currentCart;
+
+  const result = await context.cart.updateBuyerIdentity(
+    knownCheckoutProfileToBuyerIdentity(profile) as any,
+  );
+  return result.cart || currentCart;
 }
 
 function knownCheckoutProfileToBuyerIdentity(profile: KnownCheckoutProfile) {
