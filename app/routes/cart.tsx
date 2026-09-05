@@ -481,11 +481,16 @@ function CartLine({line}: {line: any}) {
               lineId={line.id}
               quantity={Math.max(0, quantity - 1)}
               disabled={quantity <= 1}
+              label="Decrease quantity"
             >
               -
             </CartQuantityButton>
-            <span>{quantity}</span>
-            <CartQuantityButton lineId={line.id} quantity={quantity + 1}>
+            <span aria-label={`Quantity ${quantity}`}>{quantity}</span>
+            <CartQuantityButton
+              lineId={line.id}
+              quantity={quantity + 1}
+              label="Increase quantity"
+            >
               +
             </CartQuantityButton>
           </div>
@@ -499,11 +504,13 @@ function CartLine({line}: {line: any}) {
 function CartQuantityButton({
   children,
   disabled,
+  label,
   lineId,
   quantity,
 }: {
   children: React.ReactNode;
   disabled?: boolean;
+  label: string;
   lineId: string;
   quantity: number;
 }) {
@@ -513,7 +520,12 @@ function CartQuantityButton({
       action={CartForm.ACTIONS.LinesUpdate}
       inputs={{lines: [{id: lineId, quantity}]}}
     >
-      <button disabled={disabled} type="submit">
+      <button
+        aria-label={label}
+        className="pilot-cart-qty-button"
+        disabled={disabled}
+        type="submit"
+      >
         {children}
       </button>
     </CartForm>

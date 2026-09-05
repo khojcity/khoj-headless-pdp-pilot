@@ -1468,23 +1468,72 @@ button.reset:hover:not(:has(> *)) {
   margin: 0;
 }
 
-.pilot-cart-controls button {
+.pilot-cart-qty-button {
   min-width: 36px;
   height: 36px;
-  border: 0;
-  background: #fff;
+  border: 1px solid transparent;
+  background: #f9faf6;
   color: #142016;
+  cursor: pointer;
   font-weight: 700;
+  line-height: 1;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease,
+    transform 100ms ease;
+}
+
+.pilot-cart-qty-button:hover,
+.pilot-cart-qty-button:focus-visible {
+  background: #0b2213;
+  border-color: #0b2213;
+  box-shadow: 0 0 0 3px rgba(13, 114, 54, 0.16);
+  color: #fff;
+  outline: 0;
+}
+
+.pilot-cart-qty-button:active {
+  transform: scale(0.94);
+}
+
+.pilot-cart-qty-button:disabled {
+  background: #f1f1eb;
+  border-color: transparent;
+  box-shadow: none;
+  color: #a1a89d;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .pilot-cart-stepper {
   align-items: center;
-  border: 1px solid #d6ded4;
+  background: #fff;
+  border: 1px solid #bdcbbb;
   display: inline-flex;
   min-height: 38px;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.pilot-cart-stepper:hover,
+.pilot-cart-stepper:focus-within {
+  border-color: #0d7236;
+  box-shadow: 0 8px 20px rgba(11, 34, 19, 0.08);
 }
 
 .pilot-cart-stepper > span {
+  align-items: center;
+  background: #fff;
+  border-left: 1px solid #e0e5dc;
+  border-right: 1px solid #e0e5dc;
+  color: #0b2213;
+  display: inline-flex;
+  font-weight: 800;
+  height: 36px;
+  justify-content: center;
   min-width: 34px;
   text-align: center;
 }
@@ -1909,7 +1958,7 @@ button.reset:hover:not(:has(> *)) {
     justify-content: flex-start;
   }
 
-  .pilot-cart-controls button {
+  .pilot-cart-qty-button {
     height: 34px;
     min-width: 34px;
   }
