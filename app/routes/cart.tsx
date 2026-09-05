@@ -48,7 +48,27 @@ export async function action({request, context}: Route.ActionArgs) {
 
   switch (action) {
     case CartForm.ACTIONS.LinesAdd:
-      result = await cart.addLines(inputs.lines);
+      if (intent === 'replaceVariantWithOne') {
+        const currentCart = await cart.get();
+        const incomingLine = inputs.lines?.[0];
+        const matchingLineIds =
+          currentCart?.lines?.nodes
+            ?.filter(
+              (line: any) =>
+                line.merchandise?.id === incomingLine?.merchandiseId,
+            )
+            .map((line: any) => line.id) || [];
+
+        if (matchingLineIds.length > 0) {
+          await cart.removeLines(matchingLineIds);
+        }
+
+        result = await cart.addLines(
+          incomingLine ? [{...incomingLine, quantity: 1}] : inputs.lines,
+        );
+      } else {
+        result = await cart.addLines(inputs.lines);
+      }
       break;
     case CartForm.ACTIONS.LinesUpdate:
       result = await cart.updateLines(inputs.lines);

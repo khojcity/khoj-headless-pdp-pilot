@@ -9,6 +9,7 @@ export function AddToCartButton({
   lines,
   onClick,
   redirectTo,
+  replaceExisting,
 }: {
   analytics?: unknown;
   children: React.ReactNode;
@@ -17,11 +18,15 @@ export function AddToCartButton({
   lines: Array<OptimisticCartLineInput>;
   onClick?: () => void;
   redirectTo?: string;
+  replaceExisting?: boolean;
 }) {
   return (
     <CartForm route="/cart" inputs={{lines}} action={CartForm.ACTIONS.LinesAdd}>
       {(fetcher: FetcherWithComponents<any>) => (
         <>
+          {replaceExisting ? (
+            <input name="_intent" type="hidden" value="replaceVariantWithOne" />
+          ) : null}
           <input
             name="analytics"
             type="hidden"

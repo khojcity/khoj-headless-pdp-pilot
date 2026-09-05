@@ -298,6 +298,7 @@ export default function Product() {
           className="pilot-button pilot-button-primary"
           disabled={!selectedVariant?.availableForSale}
           redirectTo="/cart"
+          replaceExisting
           lines={
             selectedVariant
               ? [{merchandiseId: selectedVariant.id, quantity: 1}]
@@ -451,6 +452,7 @@ function PilotProductForm({
           className="pilot-button pilot-button-secondary"
           disabled={!selectedVariant?.availableForSale}
           redirectTo="/cart"
+          replaceExisting
           lines={
             selectedVariant
               ? [{merchandiseId: selectedVariant.id, quantity: 1}]
@@ -464,6 +466,7 @@ function PilotProductForm({
         <AddToCartButton
           className="pilot-button pilot-button-primary"
           disabled={!selectedVariant?.availableForSale}
+          replaceExisting
           lines={
             selectedVariant
               ? [{merchandiseId: selectedVariant.id, quantity: 1}]
