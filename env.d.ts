@@ -16,5 +16,6 @@ declare global {
     PUBLIC_SHOP_NAME?: string;
     PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT?: string;
     PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN?: string;
+    PUBLIC_META_PIXEL_ID?: string;
   }
 }

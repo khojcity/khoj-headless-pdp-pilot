@@ -92,6 +92,7 @@ export async function loader(args: Route.LoaderArgs) {
     tracking: {
       endpoint: env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT || '',
       token: env.PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN || '',
+      metaPixelId: env.PUBLIC_META_PIXEL_ID || '',
     },
   };
 }
@@ -139,6 +140,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
             __html: `window.ENV=${JSON.stringify({
               KHOJ_SITE_ACTIVITY_ENDPOINT: data?.tracking.endpoint || '',
               KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN: data?.tracking.token || '',
+              META_PIXEL_ID: data?.tracking.metaPixelId || '',
             })}`,
           }}
         />
