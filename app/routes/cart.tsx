@@ -170,9 +170,6 @@ export default function Cart() {
             Review your handmade jewellery order before moving to checkout.
           </p>
         </div>
-        <Link to="/products/mor-pankh-classic-multi-color-hand-painted-necklace-set-hp-np">
-          Continue shopping
-        </Link>
       </div>
 
       {!hasItems ? (
@@ -188,17 +185,11 @@ export default function Cart() {
         </section>
       ) : (
         <>
-          <section className="pilot-cart-progress" aria-label="Delivery reward">
-            <div>
-              <strong>Free delivery + automatic savings</strong>
-              <span>Discounts are applied automatically based on cart value.</span>
-            </div>
-            <div className="pilot-cart-progress-bar">
-              <span />
-            </div>
-          </section>
-
-          <CartInfographics />
+          <AutomaticDiscountLadder subtotal={summary.compareAtTotal} />
+          <CartInfographic
+            alt="Automatic savings. Discounts apply automatically based on your cart value."
+            src="/infographics/automatic-savings.jpg"
+          />
 
           <section className="pilot-cart-layout">
             <div className="pilot-cart-lines">
@@ -250,14 +241,17 @@ export default function Cart() {
                 </p>
               ) : null}
 
+              <CartInfographic
+                alt="Free delivery and COD. Shop comfortably with delivery across India."
+                src="/infographics/free-delivery-cod.jpg"
+              />
+
               {cart?.checkoutUrl ? (
                 <CheckoutForm
                   checkoutTracking={checkoutTracking}
                   label="Proceed to checkout"
                 />
               ) : null}
-
-              <AutomaticDiscountLadder subtotal={summary.compareAtTotal} />
 
               <div className="pilot-cart-trust">
                 <span>COD available</span>
@@ -288,23 +282,17 @@ export default function Cart() {
   );
 }
 
-function CartInfographics() {
+function CartInfographic({alt, src}: {alt: string; src: string}) {
   return (
     <section
-      className="pilot-cart-infographics"
+      className="pilot-cart-infographic"
       aria-label="Khoj cart benefits"
     >
       <img
-        alt="Automatic savings. Discounts apply automatically based on your cart value."
+        alt={alt}
         decoding="async"
         loading="lazy"
-        src="/infographics/automatic-savings.jpg"
-      />
-      <img
-        alt="Free delivery and COD. Shop comfortably with delivery across India."
-        decoding="async"
-        loading="lazy"
-        src="/infographics/free-delivery-cod.jpg"
+        src={src}
       />
     </section>
   );

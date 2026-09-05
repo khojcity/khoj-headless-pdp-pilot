@@ -601,7 +601,7 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .pilot-infographics img,
-.pilot-cart-infographics img {
+.pilot-cart-infographic img {
   aspect-ratio: 4 / 1;
   background: #f4f1e9;
   border: 1px solid #e4e0d6;
@@ -1327,8 +1327,7 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart-empty,
 .pilot-cart-summary,
-.pilot-cart-line,
-.pilot-cart-progress {
+.pilot-cart-line {
   background: #fff;
   border: 1px solid #e1ddd2;
 }
@@ -1348,37 +1347,7 @@ button.reset:hover:not(:has(> *)) {
   min-width: 0;
 }
 
-.pilot-cart-progress {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 10px;
-  padding: 12px 14px;
-}
-
-.pilot-cart-progress strong {
-  color: #0f7c43;
-  display: block;
-}
-
-.pilot-cart-progress span {
-  color: #596858;
-  font-size: 0.9rem;
-}
-
-.pilot-cart-progress-bar {
-  background: #e7ede3;
-  height: 8px;
-  overflow: hidden;
-}
-
-.pilot-cart-progress-bar span {
-  background: #0f7c43;
-  display: block;
-  height: 100%;
-  width: 100%;
-}
-
-.pilot-cart-infographics {
+.pilot-cart-infographic {
   display: grid;
   gap: 8px;
   margin-bottom: 10px;
@@ -1534,6 +1503,10 @@ button.reset:hover:not(:has(> *)) {
   gap: 7px;
   min-width: 0;
   padding: 10px 12px;
+}
+
+.pilot-cart > .pilot-cart-ladder {
+  margin-bottom: 10px;
 }
 
 .pilot-cart-ladder strong {
@@ -1922,18 +1895,12 @@ button.reset:hover:not(:has(> *)) {
     justify-self: start;
   }
 
-  .pilot-cart-progress {
-    margin-bottom: 8px;
-    padding: 10px 12px;
-    width: 100%;
-  }
-
-  .pilot-cart-infographics {
+  .pilot-cart-infographic {
     gap: 7px;
     margin-bottom: 8px;
   }
 
-  .pilot-cart-infographics img {
+  .pilot-cart-infographic img {
     max-height: 108px;
   }
 
