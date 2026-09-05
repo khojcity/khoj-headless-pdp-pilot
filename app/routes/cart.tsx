@@ -185,12 +185,6 @@ export default function Cart() {
         </section>
       ) : (
         <>
-          <AutomaticDiscountLadder subtotal={summary.compareAtTotal} />
-          <CartInfographic
-            alt="Automatic savings. Discounts apply automatically based on your cart value."
-            src="/infographics/automatic-savings.jpg"
-          />
-
           <section className="pilot-cart-layout">
             <div className="pilot-cart-lines">
               <div className="pilot-cart-section-heading">
@@ -273,7 +267,10 @@ export default function Cart() {
                   )}
                 </strong>
               </div>
-              <CheckoutForm checkoutTracking={checkoutTracking} label="Checkout" />
+              <CheckoutForm
+                checkoutTracking={checkoutTracking}
+                label="Proceed to checkout"
+              />
             </div>
           ) : null}
         </>
@@ -525,45 +522,6 @@ function getCartSummary(cart: any, lines: any[]) {
     compareAtTotal: Math.max(compareAtTotal, subtotal),
     savings: Math.max(0, compareAtTotal - subtotal),
   };
-}
-
-function AutomaticDiscountLadder({subtotal}: {subtotal: number}) {
-  const tiers = [
-    {label: '₹500-999', discount: '5% off', min: 500},
-    {label: '₹1000-1499', discount: '10% off', min: 1000},
-    {label: '₹1500-1999', discount: '15% off', min: 1500},
-    {label: '₹2000+', discount: '20% off', min: 2000},
-  ];
-
-  const activeTier = tiers.reduce(
-    (active, tier) => (subtotal >= tier.min ? tier : active),
-    tiers[0],
-  );
-
-  return (
-    <div className="pilot-cart-ladder" aria-label="Automatic discount tiers">
-      <strong>Automatic discount applied</strong>
-      <span>
-        Current tier: {subtotal >= 500 ? activeTier.discount : 'unlocked above ₹500'}.
-        Higher cart values unlock bigger savings.
-      </span>
-      <div>
-        {tiers.map((tier) => (
-          <span
-            className={
-              subtotal >= tier.min && tier.min === activeTier.min
-                ? 'is-active'
-                : undefined
-            }
-            key={tier.label}
-          >
-            {tier.label}
-            <b>{tier.discount}</b>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 function formatRupees(amount: number) {
