@@ -59,7 +59,11 @@ function writeCookie(name: string, value: string) {
 
 function stableCookie(name: string) {
   const existing = readCookie(name);
-  if (existing) return decodeURIComponent(existing);
+  if (existing) {
+    const value = decodeURIComponent(existing);
+    writeCookie(name, value);
+    return value;
+  }
   const value = randomId();
   writeCookie(name, value);
   return value;
