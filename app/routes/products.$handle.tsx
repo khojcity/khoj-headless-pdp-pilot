@@ -19,12 +19,26 @@ import {
 } from '~/components/KhojTracking';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 
-const PILOT_HANDLE =
+const DEFAULT_PILOT_HANDLE =
   'mor-pankh-classic-multi-color-hand-painted-necklace-set-hp-np';
-const LIVE_PRODUCT_URL = `https://www.khoj.city/products/${PILOT_HANDLE}`;
+const PILOT_HANDLES = new Set([
+  DEFAULT_PILOT_HANDLE,
+  'mor-pankh-neel-handpainted-choker-set',
+  'mumbai-cha-ganesha-handpainted-necklace-032-khoj-city',
+]);
+
+function mainStoreProductUrl(handle?: string) {
+  return `https://www.khoj.city/products/${handle || DEFAULT_PILOT_HANDLE}`;
+}
+
+function pilotProductUrl(handle?: string) {
+  if (handle && PILOT_HANDLES.has(handle)) return `/products/${handle}`;
+  return mainStoreProductUrl(handle);
+}
 
 export const meta: Route.MetaFunction = ({data}) => {
   const product = data?.product;
+  const productUrl = mainStoreProductUrl(product?.handle);
   const title =
     product?.seo?.title || product?.title || 'Mor Pankh Necklace Set';
   const description =
@@ -35,19 +49,19 @@ export const meta: Route.MetaFunction = ({data}) => {
   return [
     {title},
     {name: 'description', content: description},
-    {rel: 'canonical', href: LIVE_PRODUCT_URL},
+    {rel: 'canonical', href: productUrl},
     {property: 'og:title', content: title},
     {property: 'og:description', content: description},
     {property: 'og:type', content: 'product'},
-    {property: 'og:url', content: LIVE_PRODUCT_URL},
+    {property: 'og:url', content: productUrl},
   ];
 };
 
 export async function loader(args: Route.LoaderArgs) {
   const {handle} = args.params;
 
-  if (handle !== PILOT_HANDLE) {
-    return redirect(`/products/${PILOT_HANDLE}`, 302);
+  if (!handle || !PILOT_HANDLES.has(handle)) {
+    return redirect(`/products/${DEFAULT_PILOT_HANDLE}`, 302);
   }
 
   const criticalData = await loadCriticalData(args);
@@ -95,6 +109,8 @@ function loadDeferredData({context}: Route.LoaderArgs, productId: string) {
 
 export default function Product() {
   const {product, recommendations} = useLoaderData<typeof loader>();
+  const content = getProductPageContent(product.handle);
+  const productUrl = mainStoreProductUrl(product.handle);
   const selectedVariant = useOptimisticVariant(
     product.selectedOrFirstAvailableVariant,
     getAdjacentAndFirstAvailableVariants(product),
@@ -113,7 +129,7 @@ export default function Product() {
       id: product.id,
       variantId: selectedVariant?.id || '',
       handle: product.handle,
-      url: LIVE_PRODUCT_URL,
+      url: productUrl,
       title: product.title,
       productType: product.productType,
       variantTitle: selectedVariant?.title || '',
@@ -124,6 +140,7 @@ export default function Product() {
     [
       product.handle,
       product.id,
+      productUrl,
       product.title,
       product.productType,
       product.vendor,
@@ -169,10 +186,7 @@ export default function Product() {
           <div className="pilot-title-block">
             <p className="pilot-kicker">Hand-painted jewellery</p>
             <h1>{product.title}</h1>
-            <p>
-              Peacock-inspired necklace set for sarees, kurtis, festive looks,
-              and gifting.
-            </p>
+            <p>{content.intro}</p>
           </div>
 
           {selectedVariant?.availableForSale ? (
@@ -248,33 +262,30 @@ export default function Product() {
             <h2>Why it works</h2>
             <ul>
               <li>
-                <strong>Statement without bulk</strong>
-                <span>Designed to sit comfortably with festive outfits.</span>
+                <strong>{content.highlights[0].title}</strong>
+                <span>{content.highlights[0].body}</span>
               </li>
               <li>
-                <strong>Gift-ready colour</strong>
-                <span>Peacock blue and green tones pair easily with Indian wear.</span>
+                <strong>{content.highlights[1].title}</strong>
+                <span>{content.highlights[1].body}</span>
               </li>
               <li>
-                <strong>Hand-painted detail</strong>
-                <span>Each piece carries visible handmade variation.</span>
+                <strong>{content.highlights[2].title}</strong>
+                <span>{content.highlights[2].body}</span>
               </li>
             </ul>
           </div>
 
-          <ProductDetails />
+          <ProductDetails content={content} />
         </div>
       </section>
 
       <section className="pilot-story-band" aria-label="Craft promise">
         <div>
           <p className="pilot-kicker">Khoj craft note</p>
-          <h2>Made for festive dressing, gifting, and everyday colour.</h2>
+          <h2>{content.storyTitle}</h2>
         </div>
-        <p>
-          Each set brings together hand-painted peacock-inspired detail,
-          lightweight construction, and an easy saree-to-kurti styling range.
-        </p>
+        <p>{content.storyBody}</p>
       </section>
 
       <InfographicStrip
@@ -501,51 +512,147 @@ function ReviewBadge({summary}: {summary: ReviewSummary | null}) {
   );
 }
 
-function ProductDetails() {
+type ProductPageContent = {
+  intro: string;
+  highlights: Array<{title: string; body: string}>;
+  storyTitle: string;
+  storyBody: string;
+  detailsIntro: string;
+  details: Array<{label: string; value: string}>;
+};
+
+const DEFAULT_PRODUCT_CONTENT: ProductPageContent = {
+  intro:
+    'Peacock-inspired necklace set for sarees, kurtis, festive looks, and gifting.',
+  highlights: [
+    {
+      title: 'Statement without bulk',
+      body: 'Designed to sit comfortably with festive outfits.',
+    },
+    {
+      title: 'Gift-ready colour',
+      body: 'Peacock blue and green tones pair easily with Indian wear.',
+    },
+    {
+      title: 'Hand-painted detail',
+      body: 'Each piece carries visible handmade variation.',
+    },
+  ],
+  storyTitle: 'Made for festive dressing, gifting, and everyday colour.',
+  storyBody:
+    'Each set brings together hand-painted peacock-inspired detail, lightweight construction, and an easy saree-to-kurti styling range.',
+  detailsIntro:
+    'A handmade necklace and earrings set with hand-painted peacock-inspired artwork, glass bead accents, and a lightweight festive finish.',
+  details: [
+    {label: 'Craft', value: 'Hand-painted, handmade, and handcrafted'},
+    {label: 'Includes', value: 'Necklace and matching earrings'},
+    {label: 'Material', value: 'Cardboard, fabric, acrylic paint, and glass beads'},
+    {label: 'Colour', value: 'Black and white base with peacock blue-green accents'},
+    {label: 'Weight', value: 'Approx. 50 grams'},
+    {label: 'Size', value: 'Approx. 20 x 4 inches'},
+    {
+      label: 'Best worn with',
+      value: 'Sarees, kurtis, festive wear, and traditional occasions',
+    },
+    {label: 'Delivery', value: 'Free delivery across India'},
+    {label: 'Payment', value: 'COD and prepaid options through Shopify checkout'},
+  ],
+};
+
+const PRODUCT_CONTENT_BY_HANDLE: Record<string, ProductPageContent> = {
+  [DEFAULT_PILOT_HANDLE]: DEFAULT_PRODUCT_CONTENT,
+  'mor-pankh-neel-handpainted-choker-set': {
+    intro:
+      'A blue Mor Pankh choker set for sarees, kurtis, festive looks, and handmade gifting.',
+    highlights: [
+      {
+        title: 'Choker-style statement',
+        body: 'Sits closer to the neckline for a polished festive look.',
+      },
+      {
+        title: 'Peacock blue detail',
+        body: 'Neel tones bring the Mor Pankh colour story into a bolder choker shape.',
+      },
+      {
+        title: 'Hand-painted finish',
+        body: 'Each piece is painted and assembled in small handmade batches.',
+      },
+    ],
+    storyTitle: 'Made for colour-rich festive styling.',
+    storyBody:
+      'This choker set carries the Mor Pankh mood in a closer neckline silhouette, pairing handmade detail with easy saree and kurti styling.',
+    detailsIntro:
+      'A handmade choker set with hand-painted Mor Pankh-inspired detail, glass bead accents, and a lightweight festive finish.',
+    details: [
+      {label: 'Craft', value: 'Hand-painted, handmade, and handcrafted'},
+      {label: 'Includes', value: 'Choker and matching earrings'},
+      {label: 'Material', value: 'Fabric, acrylic paint, and glass beads'},
+      {label: 'Colour', value: 'Blue and multicolour Mor Pankh accents'},
+      {label: 'Weight', value: 'Approx. 50 grams'},
+      {label: 'Size', value: 'Approx. 20 x 4 inches'},
+      {
+        label: 'Best worn with',
+        value: 'Sarees, kurtis, festive wear, and traditional occasions',
+      },
+      {label: 'Delivery', value: 'Free delivery across India'},
+      {label: 'Payment', value: 'COD and prepaid options through Shopify checkout'},
+    ],
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-032-khoj-city': {
+    intro:
+      'A Mumbai cha Ganesha hand-painted necklace for traditional wear, festive styling, and gifting.',
+    highlights: [
+      {
+        title: 'Festive Ganesha motif',
+        body: 'Brings a devotional, celebratory accent to traditional outfits.',
+      },
+      {
+        title: 'Lightweight statement',
+        body: 'Designed to add colour and craft without feeling heavy.',
+      },
+      {
+        title: 'Hand-painted detail',
+        body: 'Each necklace carries small-batch handmade variation.',
+      },
+    ],
+    storyTitle: 'Made for Ganesh festive styling and meaningful gifting.',
+    storyBody:
+      'This necklace brings together a Mumbai cha Ganesha theme, hand-painted colour, and a lightweight handmade form for festive and traditional occasions.',
+    detailsIntro:
+      'A handmade necklace with hand-painted Ganesha-inspired artwork, multicolour detailing, and a lightweight festive finish.',
+    details: [
+      {label: 'Craft', value: 'Hand-painted, handmade, and handcrafted'},
+      {label: 'Includes', value: 'Necklace'},
+      {label: 'Material', value: 'Cardboard, fabric, acrylic paint, and glass beads'},
+      {label: 'Colour', value: 'Multicolour Ganesha-inspired artwork'},
+      {label: 'Weight', value: 'Approx. 50 grams'},
+      {label: 'Size', value: 'Approx. 20 x 4 inches'},
+      {
+        label: 'Best worn with',
+        value: 'Sarees, kurtis, festive wear, and traditional occasions',
+      },
+      {label: 'Delivery', value: 'Free delivery across India'},
+      {label: 'Payment', value: 'COD and prepaid options through Shopify checkout'},
+    ],
+  },
+};
+
+function getProductPageContent(handle: string) {
+  return PRODUCT_CONTENT_BY_HANDLE[handle] || DEFAULT_PRODUCT_CONTENT;
+}
+
+function ProductDetails({content}: {content: ProductPageContent}) {
   return (
     <section className="pilot-details" aria-labelledby="details-heading">
       <h2 id="details-heading">Product details</h2>
-      <p>
-        A handmade necklace and earrings set with hand-painted peacock-inspired
-        artwork, glass bead accents, and a lightweight festive finish.
-      </p>
+      <p>{content.detailsIntro}</p>
       <dl>
-        <div>
-          <dt>Craft</dt>
-          <dd>Hand-painted, handmade, and handcrafted</dd>
-        </div>
-        <div>
-          <dt>Includes</dt>
-          <dd>Necklace and matching earrings</dd>
-        </div>
-        <div>
-          <dt>Material</dt>
-          <dd>Cardboard, fabric, acrylic paint, and glass beads</dd>
-        </div>
-        <div>
-          <dt>Colour</dt>
-          <dd>Black and white base with peacock blue-green accents</dd>
-        </div>
-        <div>
-          <dt>Weight</dt>
-          <dd>Approx. 50 grams</dd>
-        </div>
-        <div>
-          <dt>Size</dt>
-          <dd>Approx. 20 x 4 inches</dd>
-        </div>
-        <div>
-          <dt>Best worn with</dt>
-          <dd>Sarees, kurtis, festive wear, and traditional occasions</dd>
-        </div>
-        <div>
-          <dt>Delivery</dt>
-          <dd>Free delivery across India</dd>
-        </div>
-        <div>
-          <dt>Payment</dt>
-          <dd>COD and prepaid options through Shopify checkout</dd>
-        </div>
+        {content.details.map((detail) => (
+          <div key={detail.label}>
+            <dt>{detail.label}</dt>
+            <dd>{detail.value}</dd>
+          </div>
+        ))}
       </dl>
     </section>
   );
@@ -563,7 +670,7 @@ function RelatedProducts({recommendations}: {recommendations: Promise<any>}) {
               <div className="pilot-related-grid">
                 {products.slice(0, 4).map((product: any) => (
                   <a
-                    href={`https://www.khoj.city/products/${product.handle}`}
+                    href={pilotProductUrl(product.handle)}
                     key={product.id}
                   >
                     {product.featuredImage && (
@@ -638,7 +745,7 @@ function productJsonLd(
     name: product.title,
     description: product.description,
     image: image?.url,
-    url: LIVE_PRODUCT_URL,
+    url: mainStoreProductUrl(product.handle),
     brand: {
       '@type': 'Brand',
       name: 'KHOJ.CITY',
@@ -650,7 +757,7 @@ function productJsonLd(
       availability: selectedVariant?.availableForSale
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',
-      url: LIVE_PRODUCT_URL,
+      url: mainStoreProductUrl(product.handle),
     },
   };
 
