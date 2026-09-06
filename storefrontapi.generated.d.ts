@@ -514,6 +514,66 @@ export type CartAttributesUpdateMutation = {
   }>;
 };
 
+export type CartDeliveryOptionsQueryVariables = StorefrontAPI.Exact<{
+  cartId: StorefrontAPI.Scalars['ID']['input'];
+}>;
+
+export type CartDeliveryOptionsQuery = {
+  cart?: StorefrontAPI.Maybe<
+    Pick<StorefrontAPI.Cart, 'id'> & {
+      deliveryGroups: {
+        nodes: Array<
+          Pick<StorefrontAPI.CartDeliveryGroup, 'id'> & {
+            deliveryOptions: Array<
+              Pick<
+                StorefrontAPI.CartDeliveryOption,
+                'handle' | 'title' | 'description'
+              > & {
+                estimatedCost: Pick<
+                  StorefrontAPI.MoneyV2,
+                  'amount' | 'currencyCode'
+                >;
+              }
+            >;
+          }
+        >;
+      };
+    }
+  >;
+};
+
+export type CartSelectedDeliveryOptionsUpdateMutationVariables =
+  StorefrontAPI.Exact<{
+    cartId: StorefrontAPI.Scalars['ID']['input'];
+    selectedDeliveryOptions:
+      | Array<StorefrontAPI.CartSelectedDeliveryOptionInput>
+      | StorefrontAPI.CartSelectedDeliveryOptionInput;
+  }>;
+
+export type CartSelectedDeliveryOptionsUpdateMutation = {
+  cartSelectedDeliveryOptionsUpdate?: StorefrontAPI.Maybe<{
+    cart?: StorefrontAPI.Maybe<
+      Pick<StorefrontAPI.Cart, 'id' | 'checkoutUrl'> & {
+        deliveryGroups: {
+          nodes: Array<
+            Pick<StorefrontAPI.CartDeliveryGroup, 'id'> & {
+              selectedDeliveryOption?: StorefrontAPI.Maybe<
+                Pick<StorefrontAPI.CartDeliveryOption, 'handle' | 'title'> & {
+                  estimatedCost: Pick<
+                    StorefrontAPI.MoneyV2,
+                    'amount' | 'currencyCode'
+                  >;
+                }
+              >;
+            }
+          >;
+        };
+      }
+    >;
+    userErrors: Array<Pick<StorefrontAPI.CartUserError, 'field' | 'message'>>;
+  }>;
+};
+
 export type MoneyProductItemFragment = Pick<
   StorefrontAPI.MoneyV2,
   'amount' | 'currencyCode'
@@ -1375,6 +1435,10 @@ interface GeneratedQueryTypes {
     return: BlogsQuery;
     variables: BlogsQueryVariables;
   };
+  '#graphql\n  query CartDeliveryOptions($cartId: ID!) {\n    cart(id: $cartId) {\n      id\n      deliveryGroups(first: 5) {\n        nodes {\n          id\n          deliveryOptions {\n            handle\n            title\n            description\n            estimatedCost {\n              amount\n              currencyCode\n            }\n          }\n        }\n      }\n    }\n  }\n': {
+    return: CartDeliveryOptionsQuery;
+    variables: CartDeliveryOptionsQueryVariables;
+  };
   '#graphql\n  #graphql\n  fragment MoneyProductItem on MoneyV2 {\n    amount\n    currencyCode\n  }\n  fragment ProductItem on Product {\n    id\n    handle\n    title\n    featuredImage {\n      id\n      altText\n      url\n      width\n      height\n    }\n    priceRange {\n      minVariantPrice {\n        ...MoneyProductItem\n      }\n      maxVariantPrice {\n        ...MoneyProductItem\n      }\n    }\n  }\n\n  query Collection(\n    $handle: String!\n    $country: CountryCode\n    $language: LanguageCode\n    $first: Int\n    $last: Int\n    $startCursor: String\n    $endCursor: String\n  ) @inContext(country: $country, language: $language) {\n    collection(handle: $handle) {\n      id\n      handle\n      title\n      description\n      products(\n        first: $first,\n        last: $last,\n        before: $startCursor,\n        after: $endCursor\n      ) {\n        nodes {\n          ...ProductItem\n        }\n        pageInfo {\n          hasPreviousPage\n          hasNextPage\n          endCursor\n          startCursor\n        }\n      }\n    }\n  }\n': {
     return: CollectionQuery;
     variables: CollectionQueryVariables;
@@ -1421,6 +1485,10 @@ interface GeneratedMutationTypes {
   '#graphql\n  mutation CartAttributesUpdate(\n    $cartId: ID!\n    $attributes: [AttributeInput!]!\n  ) {\n    cartAttributesUpdate(cartId: $cartId, attributes: $attributes) {\n      cart {\n        id\n        checkoutUrl\n        attributes {\n          key\n          value\n        }\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n': {
     return: CartAttributesUpdateMutation;
     variables: CartAttributesUpdateMutationVariables;
+  };
+  '#graphql\n  mutation CartSelectedDeliveryOptionsUpdate(\n    $cartId: ID!\n    $selectedDeliveryOptions: [CartSelectedDeliveryOptionInput!]!\n  ) {\n    cartSelectedDeliveryOptionsUpdate(\n      cartId: $cartId\n      selectedDeliveryOptions: $selectedDeliveryOptions\n    ) {\n      cart {\n        id\n        checkoutUrl\n        deliveryGroups(first: 5) {\n          nodes {\n            id\n            selectedDeliveryOption {\n              handle\n              title\n              estimatedCost {\n                amount\n                currencyCode\n              }\n            }\n          }\n        }\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n': {
+    return: CartSelectedDeliveryOptionsUpdateMutation;
+    variables: CartSelectedDeliveryOptionsUpdateMutationVariables;
   };
 }
 

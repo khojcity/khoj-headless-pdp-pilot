@@ -1342,6 +1342,7 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart-empty,
 .pilot-cart-summary,
+.pilot-checkout-preference,
 .pilot-cart-line {
   background: #fff;
   border: 1px solid #e1ddd2;
@@ -1611,7 +1612,6 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .pilot-checkout-preference {
-  border: 1px solid #dce4d8;
   display: grid;
   gap: 8px;
   margin: 0;

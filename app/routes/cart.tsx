@@ -225,6 +225,11 @@ export default function Cart() {
               ))}
             </div>
 
+            <CheckoutPreferenceSelector
+              value={checkoutPreference}
+              onChange={setCheckoutPreference}
+            />
+
             <aside className="pilot-cart-summary">
               <h2>Price breakdown</h2>
               <dl>
@@ -263,11 +268,6 @@ export default function Cart() {
               <CartInfographic
                 alt="Free delivery and COD. Shop comfortably with delivery across India."
                 src="/infographics/free-delivery-cod.jpg"
-              />
-
-              <CheckoutPreferenceSelector
-                value={checkoutPreference}
-                onChange={setCheckoutPreference}
               />
 
               {cart?.checkoutUrl ? (
@@ -473,16 +473,28 @@ async function prepareKnownVisitorCheckout(
     ? await updateCartCheckoutPreference(context, currentCart, checkoutPreference)
     : currentCart;
   const profile = await loadKnownCheckoutProfile(request, context.env);
-  if (!profile) return cartWithPreference;
+  if (!profile) {
+    return checkoutPreference
+      ? await selectCheckoutDeliveryOption(
+          context,
+          cartWithPreference,
+          checkoutPreference,
+        )
+      : cartWithPreference;
+  }
 
   const buyerIdentity = knownCheckoutProfileToBuyerIdentity(profile);
   const result = await context.cart.updateBuyerIdentity(
     buyerIdentity as any,
   );
-  return result.cart || cartWithPreference;
+  const cartWithBuyer = result.cart || cartWithPreference;
+  return checkoutPreference
+    ? await selectCheckoutDeliveryOption(context, cartWithBuyer, checkoutPreference)
+    : cartWithBuyer;
 }
 
 type CheckoutPreference = 'prepaid' | 'cod';
+type CheckoutCart = {id: string; checkoutUrl?: string | null};
 
 function getCheckoutPreference(formData: FormData): CheckoutPreference | null {
   const value = String(formData.get('checkoutPreference') || '');
@@ -521,6 +533,76 @@ async function updateCartCheckoutPreference(
   });
 
   return result?.cartAttributesUpdate?.cart || currentCart;
+}
+
+async function selectCheckoutDeliveryOption(
+  context: Route.ActionArgs['context'],
+  currentCart: CheckoutCart,
+  checkoutPreference: CheckoutPreference,
+) {
+  try {
+    const deliveryCart = await context.storefront.query(CART_DELIVERY_OPTIONS_QUERY, {
+      variables: {cartId: currentCart.id},
+    });
+    const groups = deliveryCart?.cart?.deliveryGroups?.nodes || [];
+    const selectedDeliveryOptions = groups
+      .map((group: any) => {
+        const option = chooseDeliveryOption(group.deliveryOptions, checkoutPreference);
+        if (!option?.handle) return null;
+        return {
+          deliveryGroupId: group.id,
+          deliveryOptionHandle: option.handle,
+        };
+      })
+      .filter(Boolean);
+
+    if (!selectedDeliveryOptions.length) return currentCart;
+
+    const result = await context.storefront.mutate(
+      CART_SELECTED_DELIVERY_OPTIONS_UPDATE_MUTATION,
+      {
+        variables: {
+          cartId: currentCart.id,
+          selectedDeliveryOptions,
+        },
+      },
+    );
+
+    return result?.cartSelectedDeliveryOptionsUpdate?.cart || currentCart;
+  } catch {
+    return currentCart;
+  }
+}
+
+function chooseDeliveryOption(
+  deliveryOptions: any[] = [],
+  checkoutPreference: CheckoutPreference,
+) {
+  if (checkoutPreference === 'cod') {
+    return (
+      deliveryOptions.find((option) => deliveryOptionMatches(option, ['cod'])) ||
+      deliveryOptions.find((option) =>
+        deliveryOptionMatches(option, ['cash on delivery']),
+      ) ||
+      deliveryOptions.find((option) => Number(option.estimatedCost?.amount) === 60)
+    );
+  }
+
+  return (
+    deliveryOptions.find(
+      (option) =>
+        !deliveryOptionMatches(option, ['cod', 'cash on delivery']) &&
+        Number(option.estimatedCost?.amount) === 0,
+    ) ||
+    deliveryOptions.find((option) =>
+      deliveryOptionMatches(option, ['prepaid', 'free']),
+    )
+  );
+}
+
+function deliveryOptionMatches(option: any, terms: string[]) {
+  const label = `${option?.title || ''} ${option?.description || ''}`.toLowerCase();
+  return terms.some((term) => label.includes(term));
 }
 
 function knownCheckoutProfileToBuyerIdentity(profile: KnownCheckoutProfile) {
@@ -723,6 +805,62 @@ const CART_ATTRIBUTES_UPDATE_MUTATION = `#graphql
         attributes {
           key
           value
+        }
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+` as const;
+
+const CART_DELIVERY_OPTIONS_QUERY = `#graphql
+  query CartDeliveryOptions($cartId: ID!) {
+    cart(id: $cartId) {
+      id
+      deliveryGroups(first: 5) {
+        nodes {
+          id
+          deliveryOptions {
+            handle
+            title
+            description
+            estimatedCost {
+              amount
+              currencyCode
+            }
+          }
+        }
+      }
+    }
+  }
+` as const;
+
+const CART_SELECTED_DELIVERY_OPTIONS_UPDATE_MUTATION = `#graphql
+  mutation CartSelectedDeliveryOptionsUpdate(
+    $cartId: ID!
+    $selectedDeliveryOptions: [CartSelectedDeliveryOptionInput!]!
+  ) {
+    cartSelectedDeliveryOptionsUpdate(
+      cartId: $cartId
+      selectedDeliveryOptions: $selectedDeliveryOptions
+    ) {
+      cart {
+        id
+        checkoutUrl
+        deliveryGroups(first: 5) {
+          nodes {
+            id
+            selectedDeliveryOption {
+              handle
+              title
+              estimatedCost {
+                amount
+                currencyCode
+              }
+            }
+          }
         }
       }
       userErrors {
