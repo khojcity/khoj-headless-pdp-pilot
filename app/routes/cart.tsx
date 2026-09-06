@@ -7,7 +7,7 @@ import {
   useNavigation,
   type HeadersFunction,
 } from 'react-router';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm, Image, Money} from '@shopify/hydrogen';
@@ -331,14 +331,35 @@ function CheckoutForm({
   label: string;
 }) {
   const navigation = useNavigation();
+  const [hasSubmittedCheckout, setHasSubmittedCheckout] = useState(false);
   const isPreparingCheckout =
-    navigation.state !== 'idle' &&
-    navigation.formData?.get('_intent') === 'prepareCheckout';
+    hasSubmittedCheckout ||
+    (navigation.state !== 'idle' &&
+      navigation.formData?.get('_intent') === 'prepareCheckout');
+
+  useEffect(() => {
+    if (navigation.state === 'idle') {
+      setHasSubmittedCheckout(false);
+    }
+  }, [navigation.state]);
+
+  useEffect(() => {
+    const resetPreparingCheckout = () => setHasSubmittedCheckout(false);
+
+    window.addEventListener('pageshow', resetPreparingCheckout);
+    window.addEventListener('focus', resetPreparingCheckout);
+
+    return () => {
+      window.removeEventListener('pageshow', resetPreparingCheckout);
+      window.removeEventListener('focus', resetPreparingCheckout);
+    };
+  }, []);
 
   return (
     <Form
       method="post"
       className="pilot-checkout-form"
+      onSubmit={() => setHasSubmittedCheckout(true)}
     >
       <input type="hidden" name="_intent" value="prepareCheckout" />
       <input
