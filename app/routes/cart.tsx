@@ -4,6 +4,7 @@ import {
   Form,
   data,
   redirect,
+  useNavigation,
   type HeadersFunction,
 } from 'react-router';
 import {useState} from 'react';
@@ -329,6 +330,11 @@ function CheckoutForm({
   checkoutPreference: string;
   label: string;
 }) {
+  const navigation = useNavigation();
+  const isPreparingCheckout =
+    navigation.state !== 'idle' &&
+    navigation.formData?.get('_intent') === 'prepareCheckout';
+
   return (
     <Form
       method="post"
@@ -342,11 +348,14 @@ function CheckoutForm({
       />
       <button
         className="pilot-button pilot-button-primary"
-        disabled={!checkoutPreference}
+        disabled={!checkoutPreference || isPreparingCheckout}
         type="submit"
       >
-        {label}
+        {isPreparingCheckout ? 'Preparing checkout...' : label}
       </button>
+      {isPreparingCheckout ? (
+        <span className="pilot-checkout-progress" aria-hidden="true" />
+      ) : null}
     </Form>
   );
 }

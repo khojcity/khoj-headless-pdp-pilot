@@ -1690,6 +1690,8 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .pilot-checkout-form {
+  display: grid;
+  gap: 8px;
   margin: 0;
   min-width: 0;
   width: 100%;
@@ -1697,6 +1699,41 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-checkout-form .pilot-button {
   width: 100%;
+}
+
+.pilot-checkout-form .pilot-button:disabled {
+  cursor: wait;
+  opacity: 0.82;
+}
+
+.pilot-checkout-progress {
+  background: #e6eadf;
+  display: block;
+  height: 3px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.pilot-checkout-progress::after {
+  animation: pilot-checkout-progress 900ms ease-in-out infinite;
+  background: #0d7236;
+  content: "";
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 42%;
+}
+
+@keyframes pilot-checkout-progress {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(250%);
+  }
 }
 
 .pilot-cart-trust {
