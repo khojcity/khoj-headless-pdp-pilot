@@ -204,11 +204,8 @@ function trackMetaPixelActivity(event: TrackEvent) {
     return;
   }
 
-  if (event.eventType === 'checkout_started') {
-    fbq('track', 'InitiateCheckout', metaProductParams(event), {
-      eventID: event.eventId,
-    });
-  }
+  // Shopify checkout already fires InitiateCheckout. Keep Hydrogen Meta events
+  // limited to the pre-checkout storefront funnel to avoid duplicate signals.
 }
 
 export function trackKhojActivity(event: TrackEvent) {
