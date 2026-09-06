@@ -1610,6 +1610,72 @@ button.reset:hover:not(:has(> *)) {
   padding: 9px 12px;
 }
 
+.pilot-checkout-preference {
+  border: 1px solid #dce4d8;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+}
+
+.pilot-checkout-preference legend {
+  color: #142016;
+  font-size: 0.92rem;
+  font-weight: 800;
+  padding: 0 6px;
+}
+
+.pilot-checkout-option {
+  align-items: center;
+  background: #fbfbf7;
+  border: 1px solid #dce4d8;
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 58px;
+  padding: 10px 12px;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.pilot-checkout-option:hover,
+.pilot-checkout-option:focus-within {
+  border-color: #0d7236;
+  box-shadow: 0 8px 20px rgba(11, 34, 19, 0.08);
+}
+
+.pilot-checkout-option-selected {
+  background: #f0f8ee;
+  border-color: #0d7236;
+}
+
+.pilot-checkout-option input {
+  accent-color: #0d7236;
+  height: 18px;
+  margin: 0;
+  width: 18px;
+}
+
+.pilot-checkout-option span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pilot-checkout-option strong {
+  color: #142016;
+  line-height: 1.2;
+}
+
+.pilot-checkout-option small {
+  color: #596858;
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
 .pilot-cart-summary p {
   margin: 0;
   color: #687768;
@@ -1673,6 +1739,13 @@ button.reset:hover:not(:has(> *)) {
 .pilot-cart-sticky span {
   color: #596858;
   font-size: 0.72rem;
+}
+
+.pilot-cart-sticky small {
+  color: #9a6b00;
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin-top: 2px;
 }
 
 .pilot-cart-sticky strong {

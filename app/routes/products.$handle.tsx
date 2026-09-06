@@ -158,13 +158,6 @@ export default function Product() {
     totalPrice: selectedVariant?.price,
   });
 
-  const checkoutTracking = () => ({
-    eventType: 'checkout_started',
-    eventId: `hydrogen_checkout:${selectedVariant?.id || product.id}:${Date.now()}`,
-    product: trackingProduct,
-    items: [trackingProduct],
-    totalPrice: selectedVariant?.price,
-  });
   const savings = getSavings(selectedVariant);
 
   return (
@@ -217,7 +210,6 @@ export default function Product() {
               productOptions={productOptions}
               selectedVariant={selectedVariant}
               addToCartTracking={addToCartTracking}
-              checkoutTracking={checkoutTracking}
             />
 
             <div className="pilot-checkout-notes" aria-label="Checkout benefits">
@@ -429,12 +421,10 @@ function PilotProductForm({
   productOptions,
   selectedVariant,
   addToCartTracking,
-  checkoutTracking,
 }: {
   productOptions: any[];
   selectedVariant: any;
   addToCartTracking: () => TrackEvent;
-  checkoutTracking: () => TrackEvent;
 }) {
   return (
     <div className="pilot-form">
@@ -486,7 +476,6 @@ function PilotProductForm({
               : []
           }
           redirectTo="checkout"
-          onClick={() => trackKhojActivity(checkoutTracking())}
         >
           Buy now
         </AddToCartButton>

@@ -6,10 +6,10 @@ import {
   redirect,
   type HeadersFunction,
 } from 'react-router';
+import {useState} from 'react';
 import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm, Image, Money} from '@shopify/hydrogen';
-import {trackKhojActivity} from '~/components/KhojTracking';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: `Cart | KHOJ.CITY`}];
@@ -29,10 +29,16 @@ export async function action({request, context}: Route.ActionArgs) {
       return redirect('/cart');
     }
 
+    const checkoutPreference = getCheckoutPreference(formData);
+    if (!checkoutPreference) {
+      return redirect('/cart?checkoutPreference=required');
+    }
+
     const preparedCart = await prepareKnownVisitorCheckout(
       request,
       context,
       currentCart,
+      checkoutPreference,
     );
     return redirect(preparedCart.checkoutUrl || currentCart.checkoutUrl);
   }
@@ -121,10 +127,28 @@ export async function action({request, context}: Route.ActionArgs) {
 
   const redirectTo = formData.get('redirectTo') ?? null;
   if (redirectTo === 'checkout' && cartResult?.checkoutUrl) {
+    const checkoutPreference = getCheckoutPreference(formData);
+    if (!checkoutPreference) {
+      status = 303;
+      headers.set('Location', '/cart?checkoutPreference=required');
+      return data(
+        {
+          cart: cartResult,
+          errors,
+          warnings,
+          analytics: {
+            cartId,
+          },
+        },
+        {status, headers},
+      );
+    }
+
     const preparedCart = await prepareKnownVisitorCheckout(
       request,
       context,
       cartResult,
+      checkoutPreference,
     );
     status = 303;
     headers.set('Location', preparedCart.checkoutUrl || cartResult.checkoutUrl);
@@ -157,29 +181,12 @@ export default function Cart() {
   const hasItems = lines.length > 0;
   const totalQuantity = cart?.totalQuantity || 0;
   const summary = getCartSummary(cart, lines);
-  const checkoutTracking = () => ({
-    eventType: 'checkout_started',
-    eventId: `hydrogen_cart_checkout:${cart?.id || 'cart'}:${Date.now()}`,
-    items: lines.map((line: any) => {
-      const merchandise = line.merchandise || {};
-      return {
-        id: merchandise.product?.id || merchandise.id || line.id,
-        variantId: merchandise.id,
-        handle: merchandise.product?.handle,
-        url: merchandise.product?.handle
-          ? `https://www.khoj.city/products/${merchandise.product.handle}`
-          : undefined,
-        title: merchandise.product?.title || merchandise.title || 'Cart item',
-        variantTitle: merchandise.title,
-        vendor: merchandise.product?.vendor,
-        price: line.cost?.totalAmount,
-        quantity: line.quantity || 1,
-      };
-    }),
-    totalPrice: cart?.cost?.subtotalAmount,
-    checkoutUrl: cart?.checkoutUrl,
-  });
-
+  const savedCheckoutPreference = getSavedCheckoutPreference(cart);
+  const [checkoutPreference, setCheckoutPreference] = useState(
+    savedCheckoutPreference || '',
+  );
+  const codFee = checkoutPreference === 'cod' ? 60 : 0;
+  const displayTotal = summary.subtotal + codFee;
   return (
     <main className="pilot-cart">
       <div className="pilot-cart-header">
@@ -232,19 +239,17 @@ export default function Cart() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Delivery fee</dt>
+                  <dt>Shipping</dt>
                   <dd>
-                    <span className="pilot-cart-strike">₹49</span> Free
+                    {checkoutPreference === 'cod'
+                      ? 'COD + ₹60'
+                      : 'Free'}
                   </dd>
                 </div>
                 <div className="pilot-cart-total-row">
                   <dt>Total</dt>
                   <dd>
-                    {cart?.cost?.subtotalAmount ? (
-                      <Money data={cart.cost.subtotalAmount} />
-                    ) : (
-                      '-'
-                    )}
+                    {formatRupees(displayTotal)}
                   </dd>
                 </div>
               </dl>
@@ -260,9 +265,14 @@ export default function Cart() {
                 src="/infographics/free-delivery-cod.jpg"
               />
 
+              <CheckoutPreferenceSelector
+                value={checkoutPreference}
+                onChange={setCheckoutPreference}
+              />
+
               {cart?.checkoutUrl ? (
                 <CheckoutForm
-                  checkoutTracking={checkoutTracking}
+                  checkoutPreference={checkoutPreference}
                   label="Proceed to checkout"
                 />
               ) : null}
@@ -279,16 +289,13 @@ export default function Cart() {
             <div className="pilot-cart-sticky">
               <div>
                 <span>Total</span>
-                <strong>
-                  {cart?.cost?.subtotalAmount ? (
-                    <Money data={cart.cost.subtotalAmount} />
-                  ) : (
-                    '-'
-                  )}
-                </strong>
+                <strong>{formatRupees(displayTotal)}</strong>
+                {!checkoutPreference ? (
+                  <small>Select shipping type</small>
+                ) : null}
               </div>
               <CheckoutForm
-                checkoutTracking={checkoutTracking}
+                checkoutPreference={checkoutPreference}
                 label="Proceed to checkout"
               />
             </div>
@@ -316,23 +323,89 @@ function CartInfographic({alt, src}: {alt: string; src: string}) {
 }
 
 function CheckoutForm({
-  checkoutTracking,
+  checkoutPreference,
   label,
 }: {
-  checkoutTracking: () => Parameters<typeof trackKhojActivity>[0];
+  checkoutPreference: string;
   label: string;
 }) {
   return (
     <Form
       method="post"
       className="pilot-checkout-form"
-      onSubmit={() => trackKhojActivity(checkoutTracking())}
     >
       <input type="hidden" name="_intent" value="prepareCheckout" />
-      <button className="pilot-button pilot-button-primary" type="submit">
+      <input
+        type="hidden"
+        name="checkoutPreference"
+        value={checkoutPreference}
+      />
+      <button
+        className="pilot-button pilot-button-primary"
+        disabled={!checkoutPreference}
+        type="submit"
+      >
         {label}
       </button>
     </Form>
+  );
+}
+
+function CheckoutPreferenceSelector({
+  onChange,
+  value,
+}: {
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  return (
+    <fieldset className="pilot-checkout-preference">
+      <legend>Choose shipping type</legend>
+      <label
+        aria-label="Prepaid, free shipping"
+        className={
+          value === 'prepaid'
+            ? 'pilot-checkout-option pilot-checkout-option-selected'
+            : 'pilot-checkout-option'
+        }
+        htmlFor="checkout-preference-prepaid"
+      >
+        <input
+          checked={value === 'prepaid'}
+          id="checkout-preference-prepaid"
+          name="checkoutPreferenceChoice"
+          onChange={() => onChange('prepaid')}
+          type="radio"
+          value="prepaid"
+        />
+        <span>
+          <strong>Prepaid</strong>
+          <small>Free shipping</small>
+        </span>
+      </label>
+      <label
+        aria-label="Cash on delivery, 60 rupees COD shipping charge"
+        className={
+          value === 'cod'
+            ? 'pilot-checkout-option pilot-checkout-option-selected'
+            : 'pilot-checkout-option'
+        }
+        htmlFor="checkout-preference-cod"
+      >
+        <input
+          checked={value === 'cod'}
+          id="checkout-preference-cod"
+          name="checkoutPreferenceChoice"
+          onChange={() => onChange('cod')}
+          type="radio"
+          value="cod"
+        />
+        <span>
+          <strong>Cash on delivery</strong>
+          <small>₹60 COD shipping charge</small>
+        </span>
+      </label>
+    </fieldset>
   );
 }
 
@@ -394,15 +467,60 @@ async function prepareKnownVisitorCheckout(
   request: Request,
   context: Route.ActionArgs['context'],
   currentCart: NonNullable<Awaited<ReturnType<Route.ActionArgs['context']['cart']['get']>>>,
+  checkoutPreference?: CheckoutPreference,
 ) {
+  const cartWithPreference = checkoutPreference
+    ? await updateCartCheckoutPreference(context, currentCart, checkoutPreference)
+    : currentCart;
   const profile = await loadKnownCheckoutProfile(request, context.env);
-  if (!profile) return currentCart;
+  if (!profile) return cartWithPreference;
 
   const buyerIdentity = knownCheckoutProfileToBuyerIdentity(profile);
   const result = await context.cart.updateBuyerIdentity(
     buyerIdentity as any,
   );
-  return result.cart || currentCart;
+  return result.cart || cartWithPreference;
+}
+
+type CheckoutPreference = 'prepaid' | 'cod';
+
+function getCheckoutPreference(formData: FormData): CheckoutPreference | null {
+  const value = String(formData.get('checkoutPreference') || '');
+  return value === 'prepaid' || value === 'cod' ? value : null;
+}
+
+function getSavedCheckoutPreference(cart: any): CheckoutPreference | '' {
+  const value = cart?.attributes?.find(
+    (attribute: any) => attribute.key === 'checkout_payment_preference',
+  )?.value;
+  return value === 'prepaid' || value === 'cod' ? value : '';
+}
+
+async function updateCartCheckoutPreference(
+  context: Route.ActionArgs['context'],
+  currentCart: NonNullable<Awaited<ReturnType<Route.ActionArgs['context']['cart']['get']>>>,
+  checkoutPreference: CheckoutPreference,
+) {
+  const result = await context.storefront.mutate(CART_ATTRIBUTES_UPDATE_MUTATION, {
+    variables: {
+      cartId: currentCart.id,
+      attributes: [
+        {
+          key: 'checkout_payment_preference',
+          value: checkoutPreference,
+        },
+        {
+          key: 'checkout_shipping_label',
+          value:
+            checkoutPreference === 'cod'
+              ? 'Cash on delivery - COD shipping charge ₹60'
+              : 'Prepaid - Free shipping',
+        },
+      ],
+    },
+  });
+
+  return result?.cartAttributesUpdate?.cart || currentCart;
 }
 
 function knownCheckoutProfileToBuyerIdentity(profile: KnownCheckoutProfile) {
@@ -568,6 +686,7 @@ function getCartSummary(cart: any, lines: any[]) {
   return {
     compareAtTotal: Math.max(compareAtTotal, subtotal),
     savings: Math.max(0, compareAtTotal - subtotal),
+    subtotal,
   };
 }
 
@@ -591,3 +710,25 @@ function CartRemoveButton({lineId}: {lineId: string}) {
     </CartForm>
   );
 }
+
+const CART_ATTRIBUTES_UPDATE_MUTATION = `#graphql
+  mutation CartAttributesUpdate(
+    $cartId: ID!
+    $attributes: [AttributeInput!]!
+  ) {
+    cartAttributesUpdate(cartId: $cartId, attributes: $attributes) {
+      cart {
+        id
+        checkoutUrl
+        attributes {
+          key
+          value
+        }
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+` as const;
