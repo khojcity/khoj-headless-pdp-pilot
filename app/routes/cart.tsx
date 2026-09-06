@@ -332,10 +332,7 @@ function CheckoutForm({
 }) {
   const navigation = useNavigation();
   const [hasSubmittedCheckout, setHasSubmittedCheckout] = useState(false);
-  const isPreparingCheckout =
-    hasSubmittedCheckout ||
-    (navigation.state !== 'idle' &&
-      navigation.formData?.get('_intent') === 'prepareCheckout');
+  const isPreparingCheckout = hasSubmittedCheckout;
 
   useEffect(() => {
     if (navigation.state === 'idle') {
@@ -345,15 +342,19 @@ function CheckoutForm({
 
   useEffect(() => {
     const resetPreparingCheckout = () => setHasSubmittedCheckout(false);
+    const timeout = window.setTimeout(resetPreparingCheckout, 8000);
 
     window.addEventListener('pageshow', resetPreparingCheckout);
     window.addEventListener('focus', resetPreparingCheckout);
+    document.addEventListener('visibilitychange', resetPreparingCheckout);
 
     return () => {
+      window.clearTimeout(timeout);
       window.removeEventListener('pageshow', resetPreparingCheckout);
       window.removeEventListener('focus', resetPreparingCheckout);
+      document.removeEventListener('visibilitychange', resetPreparingCheckout);
     };
-  }, []);
+  }, [hasSubmittedCheckout]);
 
   return (
     <Form
