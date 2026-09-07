@@ -18,6 +18,55 @@ export async function action({request, context}: Route.ActionArgs) {
   const payload = String(formData.get('payload') || '');
   const source = String(formData.get('source') || '');
 
+  return importThemeCart({
+    context,
+    discountCodes: getDiscountCodes(formData),
+    payload,
+    source,
+  });
+}
+
+export function loader({request, context}: Route.LoaderArgs) {
+  const url = new URL(request.url);
+  return importThemeCart({
+    context,
+    discountCodes: getDiscountCodes(url.searchParams),
+    payload: url.searchParams.get('payload') || '',
+    source: url.searchParams.get('source') || '',
+  });
+}
+
+export default function Component() {
+  return null;
+}
+
+function parseBridgePayload(payload: string): AjaxCart {
+  const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+  const paddedPayload =
+    normalizedPayload + '='.repeat((4 - (normalizedPayload.length % 4)) % 4);
+
+  try {
+    return JSON.parse(decodeURIComponent(escape(atob(paddedPayload)))) as AjaxCart;
+  } catch {
+    try {
+      return JSON.parse(atob(paddedPayload)) as AjaxCart;
+    } catch {
+      return {};
+    }
+  }
+}
+
+async function importThemeCart({
+  context,
+  discountCodes,
+  payload,
+  source,
+}: {
+  context: Route.ActionArgs['context'];
+  discountCodes: string[];
+  payload: string;
+  source: string;
+}) {
   if (!payload || source !== 'khoj-theme-cart') {
     return redirect('/cart?bridge=invalid');
   }
@@ -29,7 +78,6 @@ export async function action({request, context}: Route.ActionArgs) {
     return redirect('/cart?bridge=empty');
   }
 
-  const discountCodes = getDiscountCodes(formData);
   const result = await context.cart.create({
     lines,
     discountCodes,
@@ -52,26 +100,6 @@ export async function action({request, context}: Route.ActionArgs) {
 
   const headers = context.cart.setCartId(cartResult.id);
   return redirect('/cart?bridge=imported', {headers});
-}
-
-export function loader() {
-  return redirect('/cart');
-}
-
-export default function Component() {
-  return null;
-}
-
-function parseBridgePayload(payload: string): AjaxCart {
-  try {
-    return JSON.parse(decodeURIComponent(escape(atob(payload)))) as AjaxCart;
-  } catch {
-    try {
-      return JSON.parse(atob(payload)) as AjaxCart;
-    } catch {
-      return {};
-    }
-  }
 }
 
 function ajaxCartToCartLines(cart: AjaxCart) {
@@ -107,7 +135,7 @@ function propertiesToAttributes(properties: AjaxCart['items'][number]['propertie
     }));
 }
 
-function getDiscountCodes(formData: FormData) {
+function getDiscountCodes(formData: FormData | URLSearchParams) {
   const discount = String(formData.get('discount') || '').trim();
   return discount ? [discount] : [];
 }
