@@ -21,6 +21,7 @@ export async function action({request, context}: Route.ActionArgs) {
   return importThemeCart({
     context,
     discountCodes: getDiscountCodes(formData),
+    mode: getBridgeMode(formData),
     payload,
     source,
   });
@@ -31,6 +32,7 @@ export function loader({request, context}: Route.LoaderArgs) {
   return importThemeCart({
     context,
     discountCodes: getDiscountCodes(url.searchParams),
+    mode: getBridgeMode(url.searchParams),
     payload: url.searchParams.get('payload') || '',
     source: url.searchParams.get('source') || '',
   });
@@ -59,11 +61,13 @@ function parseBridgePayload(payload: string): AjaxCart {
 async function importThemeCart({
   context,
   discountCodes,
+  mode,
   payload,
   source,
 }: {
   context: Route.ActionArgs['context'];
   discountCodes: string[];
+  mode: BridgeMode;
   payload: string;
   source: string;
 }) {
@@ -78,17 +82,21 @@ async function importThemeCart({
     return redirect('/cart?bridge=empty');
   }
 
-  const result = await context.cart.create({
-    lines,
-    discountCodes,
-    note: sourceCart.note || undefined,
-    attributes: [
-      {
-        key: 'cart_bridge_source',
-        value: 'www.khoj.city',
-      },
-    ],
-  });
+  const existingCart = mode === 'append' ? await context.cart.get() : null;
+  const result =
+    existingCart?.id
+      ? await context.cart.addLines(lines)
+      : await context.cart.create({
+          lines,
+          discountCodes,
+          note: sourceCart.note || undefined,
+          attributes: [
+            {
+              key: 'cart_bridge_source',
+              value: 'www.khoj.city',
+            },
+          ],
+        });
 
   const cartResult = result.cart;
 
@@ -138,4 +146,10 @@ function propertiesToAttributes(properties: AjaxCart['items'][number]['propertie
 function getDiscountCodes(formData: FormData | URLSearchParams) {
   const discount = String(formData.get('discount') || '').trim();
   return discount ? [discount] : [];
+}
+
+type BridgeMode = 'replace' | 'append';
+
+function getBridgeMode(formData: FormData | URLSearchParams): BridgeMode {
+  return formData.get('mode') === 'append' ? 'append' : 'replace';
 }
