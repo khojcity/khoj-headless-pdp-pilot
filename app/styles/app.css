@@ -2113,56 +2113,107 @@ button.reset:hover:not(:has(> *)) {
   }
 
   .pilot-cart-lines {
-    padding: 12px;
+    padding: 10px;
   }
 
   .pilot-cart-section-heading {
-    margin: 0 0 10px;
+    margin: 0 0 9px;
     padding-bottom: 8px;
   }
 
+  .pilot-cart-section-heading h2 {
+    font-size: 1rem;
+    line-height: 1.15;
+  }
+
+  .pilot-cart-section-heading span {
+    font-size: 0.82rem;
+  }
+
   .pilot-cart-line {
-    grid-template-columns: 86px minmax(0, 1fr);
-    gap: 10px;
+    grid-template-columns: 74px minmax(0, 1fr);
+    gap: 9px;
     width: 100%;
   }
 
   .pilot-cart-line img {
     height: 92px;
-    width: 86px;
+    width: 74px;
   }
 
   .pilot-cart-line-title {
     display: grid;
-    gap: 6px;
+    gap: 5px;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .pilot-cart-line-title a {
-    font-size: 0.98rem;
+    display: -webkit-box;
+    font-size: 0.9rem;
+    line-height: 1.18;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  .pilot-cart-line-price {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 7px;
+    justify-items: start;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .pilot-cart-line-price strong {
+    font-size: 0.96rem;
+  }
+
+  .pilot-cart-line-price span {
+    font-size: 0.78rem;
+  }
+
+  .pilot-cart-line-price em {
+    font-size: 0.62rem;
+    padding: 4px 5px;
   }
 
   .pilot-cart-line-body {
-    gap: 7px;
+    gap: 8px;
   }
 
   .pilot-cart-line-body > p,
   .pilot-cart-line-body ul {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
+    line-height: 1.25;
   }
 
   .pilot-cart-controls {
     align-items: center;
-    gap: 6px;
-    justify-content: flex-start;
+    gap: 8px;
+    justify-content: space-between;
+    width: 100%;
   }
 
   .pilot-cart-qty-button {
-    height: 34px;
-    min-width: 34px;
+    height: 32px;
+    min-width: 32px;
+  }
+
+  .pilot-cart-stepper {
+    min-height: 34px;
+  }
+
+  .pilot-cart-stepper > span {
+    height: 32px;
+    min-width: 32px;
   }
 
   .pilot-cart-remove {
-    padding: 0 10px;
+    background: transparent;
+    font-size: 0.78rem;
+    padding: 0;
   }
 
   .pilot-cart-summary {
