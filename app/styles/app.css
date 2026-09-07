@@ -1443,6 +1443,40 @@ button.reset:hover:not(:has(> *)) {
   font-weight: 800;
 }
 
+.pilot-cart-line-price {
+  align-items: flex-end;
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+  min-width: 92px;
+  text-align: right;
+}
+
+.pilot-cart-line-price strong {
+  color: #142016;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.pilot-cart-line-price span {
+  color: #687768;
+  font-size: 0.82rem;
+  line-height: 1;
+  text-decoration: line-through;
+}
+
+.pilot-cart-line-price em {
+  background: #f42b2b;
+  color: #fff;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  padding: 5px 6px;
+  text-transform: uppercase;
+}
+
 .pilot-cart-line-body > p {
   color: #596858;
   font-size: 0.9rem;
@@ -1616,6 +1650,17 @@ button.reset:hover:not(:has(> *)) {
   gap: 8px;
   margin: 0;
   padding: 12px;
+  position: relative;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.pilot-checkout-preference-pending {
+  animation: pilot-pending-step 1.4s ease-in-out infinite;
+  border-color: #d99a00;
+  box-shadow: 0 0 0 3px rgba(217, 154, 0, 0.12);
 }
 
 .pilot-checkout-preference legend {
@@ -1623,6 +1668,25 @@ button.reset:hover:not(:has(> *)) {
   font-size: 0.92rem;
   font-weight: 800;
   padding: 0 6px;
+}
+
+.pilot-checkout-preference legend span {
+  background: #fff4df;
+  color: #7a4d00;
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 900;
+  margin-left: 8px;
+  padding: 3px 6px;
+  text-transform: uppercase;
+}
+
+.pilot-checkout-preference-pending .pilot-checkout-option {
+  animation: pilot-option-nudge 1.4s ease-in-out infinite;
+}
+
+.pilot-checkout-preference-pending .pilot-checkout-option:nth-of-type(2) {
+  animation-delay: 110ms;
 }
 
 .pilot-checkout-option {
@@ -1733,6 +1797,30 @@ button.reset:hover:not(:has(> *)) {
 
   100% {
     transform: translateX(250%);
+  }
+}
+
+@keyframes pilot-pending-step {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(217, 154, 0, 0.1);
+    transform: translateY(0);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgba(217, 154, 0, 0.2);
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes pilot-option-nudge {
+  0%,
+  100% {
+    border-color: #dce4d8;
+  }
+
+  50% {
+    border-color: #d99a00;
   }
 }
 

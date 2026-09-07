@@ -389,9 +389,19 @@ function CheckoutPreferenceSelector({
   onChange: (value: string) => void;
   value: string;
 }) {
+  const isPending = !value;
   return (
-    <fieldset className="pilot-checkout-preference">
-      <legend>Choose shipping type</legend>
+    <fieldset
+      className={
+        isPending
+          ? 'pilot-checkout-preference pilot-checkout-preference-pending'
+          : 'pilot-checkout-preference'
+      }
+    >
+      <legend>
+        Choose shipping type
+        {isPending ? <span>Select one to continue</span> : null}
+      </legend>
       <label
         aria-label="Prepaid, free shipping"
         className={
@@ -692,6 +702,7 @@ function CartLine({line}: {line: any}) {
   const merchandise = line.merchandise || {};
   const product = merchandise.product || {};
   const selectedOptions = merchandise.selectedOptions || [];
+  const linePrice = getCartLinePrice(line);
 
   return (
     <article className="pilot-cart-line">
@@ -709,7 +720,7 @@ function CartLine({line}: {line: any}) {
           <Link to={`/products/${product.handle || ''}`}>
             {product.title || merchandise.title}
           </Link>
-          {line.cost?.totalAmount ? <Money data={line.cost.totalAmount} /> : null}
+          <CartLinePrice price={linePrice} />
         </div>
 
         <p>Handmade jewellery · Free delivery</p>
@@ -749,6 +760,22 @@ function CartLine({line}: {line: any}) {
         </div>
       </div>
     </article>
+  );
+}
+
+function CartLinePrice({price}: {price: ReturnType<typeof getCartLinePrice>}) {
+  if (!price.saleAmount) return null;
+
+  return (
+    <div className="pilot-cart-line-price">
+      <strong>{formatRupees(price.saleAmount)}</strong>
+      {price.compareAtAmount > price.saleAmount ? (
+        <>
+          <span>{formatRupees(price.compareAtAmount)}</span>
+          <em>{price.discountPercent}% off</em>
+        </>
+      ) : null}
+    </div>
   );
 }
 
@@ -800,6 +827,29 @@ function getCartSummary(cart: any, lines: any[]) {
     compareAtTotal: Math.max(compareAtTotal, subtotal),
     savings: Math.max(0, compareAtTotal - subtotal),
     subtotal,
+  };
+}
+
+function getCartLinePrice(line: any) {
+  const quantity = Number(line.quantity || 1);
+  const saleAmount = Number(line.cost?.totalAmount?.amount || 0);
+  const compareAtPerQuantity = Number(
+    line.cost?.compareAtAmountPerQuantity?.amount ||
+      line.merchandise?.compareAtPrice?.amount ||
+      0,
+  );
+  const compareAtAmount = compareAtPerQuantity
+    ? compareAtPerQuantity * quantity
+    : saleAmount;
+  const discountPercent =
+    compareAtAmount > saleAmount
+      ? Math.round(((compareAtAmount - saleAmount) / compareAtAmount) * 100)
+      : 0;
+
+  return {
+    compareAtAmount,
+    discountPercent,
+    saleAmount,
   };
 }
 
