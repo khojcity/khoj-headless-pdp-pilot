@@ -9,6 +9,7 @@ export default hydrogenRoutes([
   index('routes/_index.tsx'),
   route('products/:handle', 'routes/products.$handle.tsx'),
   route('cart', 'routes/cart.tsx'),
+  route('cart/bridge', 'routes/cart.bridge.tsx'),
   route('robots.txt', 'routes/[robots.txt].tsx'),
   route('sitemap.xml', 'routes/[sitemap.xml].tsx'),
   route('*', 'routes/$.tsx'),
