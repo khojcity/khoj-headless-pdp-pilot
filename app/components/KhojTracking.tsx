@@ -5,6 +5,8 @@ const VISITOR_COOKIE = 'khoj_visitor_id';
 const VISITOR_CUSTOMER_COOKIE = 'khoj_visitor_customer_id';
 const OPPREF_COOKIE = 'khoj_oppref';
 const OBREF_COOKIE = 'khoj_obref';
+const FBP_COOKIE = '_fbp';
+const FBC_COOKIE = '_fbc';
 const COOKIE_MAX_AGE_SECONDS = 15552000;
 const SHARED_COOKIE_DOMAIN = '.khoj.city';
 const META_PIXEL_SCRIPT_SRC = 'https://connect.facebook.net/en_US/fbevents.js';
@@ -84,8 +86,12 @@ function rememberAttribution() {
   const url = new URL(window.location.href);
   const oppref = url.searchParams.get('oppref');
   const obref = url.searchParams.get('__obref');
+  const fbclid = url.searchParams.get('fbclid');
   if (oppref) writeCookie(OPPREF_COOKIE, oppref);
   if (obref) writeCookie(OBREF_COOKIE, obref);
+  if (fbclid && !readCookie(FBC_COOKIE)) {
+    writeCookie(FBC_COOKIE, `fb.1.${Date.now()}.${fbclid}`);
+  }
 }
 
 function installMetaPixelStub() {
@@ -227,6 +233,12 @@ export function trackKhojActivity(event: TrackEvent) {
     referrer: document.referrer,
     oppref: readCookie(OPPREF_COOKIE) || '',
     obref: readCookie(OBREF_COOKIE) || '',
+    fbp: readCookie(FBP_COOKIE) || '',
+    fbc: readCookie(FBC_COOKIE) || '',
+    user_agent: window.navigator.userAgent,
+    language: window.navigator.language,
+    screen_width: window.screen?.width,
+    screen_height: window.screen?.height,
     device_id: stableCookie(DEVICE_COOKIE),
     visitor_id: stableCookie(VISITOR_COOKIE),
     visitor_customer_id: readCookie(VISITOR_CUSTOMER_COOKIE) || '',
