@@ -18,6 +18,21 @@ import {PilotShell} from '~/components/PilotShell';
 
 export type RootLoader = typeof loader;
 
+const KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT =
+  'https://khoj-wa-inbox-capi-test-ko6t5h22wq-el.a.run.app/api/shopify/site-activity';
+const KHOJ_STUCK_SITE_ACTIVITY_HOSTS = [
+  'khoj-wa-inbox-ko6t5h22wq-el.a.run.app',
+  'khoj-wa-inbox-364232686531.asia-south1.run.app',
+];
+
+function khojSiteActivityEndpoint(endpoint?: string) {
+  const rawEndpoint = endpoint || '';
+  if (!rawEndpoint) return KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT;
+  return KHOJ_STUCK_SITE_ACTIVITY_HOSTS.some((host) => rawEndpoint.includes(host))
+    ? KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT
+    : rawEndpoint;
+}
+
 /**
  * This is important to avoid re-fetching root queries on sub-navigations
  */
@@ -90,7 +105,7 @@ export async function loader(args: Route.LoaderArgs) {
       language: args.context.storefront.i18n.language,
     },
     tracking: {
-      endpoint: env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT || '',
+      endpoint: khojSiteActivityEndpoint(env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT),
       token: env.PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN || '',
       metaPixelId: env.PUBLIC_META_PIXEL_ID || '',
     },

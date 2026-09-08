@@ -18,6 +18,21 @@ export const meta: Route.MetaFunction = () => {
 
 export const headers: HeadersFunction = ({actionHeaders}) => actionHeaders;
 
+const KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT =
+  'https://khoj-wa-inbox-capi-test-ko6t5h22wq-el.a.run.app/api/shopify/site-activity';
+const KHOJ_STUCK_SITE_ACTIVITY_HOSTS = [
+  'khoj-wa-inbox-ko6t5h22wq-el.a.run.app',
+  'khoj-wa-inbox-364232686531.asia-south1.run.app',
+];
+
+function khojSiteActivityEndpoint(endpoint?: string) {
+  const rawEndpoint = endpoint || '';
+  if (!rawEndpoint) return KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT;
+  return KHOJ_STUCK_SITE_ACTIVITY_HOSTS.some((host) => rawEndpoint.includes(host))
+    ? KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT
+    : rawEndpoint;
+}
+
 export async function action({request, context}: Route.ActionArgs) {
   const {cart} = context;
 
@@ -470,7 +485,7 @@ type KnownCheckoutProfile = {
 };
 
 async function loadKnownCheckoutProfile(request: Request, env: Env) {
-  const endpoint = env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT;
+  const endpoint = khojSiteActivityEndpoint(env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT);
   const token = env.PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN;
   if (!endpoint || !token) return null;
 
