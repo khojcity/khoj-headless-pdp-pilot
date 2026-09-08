@@ -52,6 +52,12 @@ function randomId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+export function khojTrackingEventId(prefix: string) {
+  return `sh-${prefix}-${randomId()}`
+    .replace(/[^A-Za-z0-9_-]/g, '-')
+    .slice(0, 120);
+}
+
 function readCookie(name: string) {
   const prefix = `${name}=`;
   return document.cookie
@@ -260,14 +266,13 @@ export function trackKhojActivity(event: TrackEvent) {
 
 export function KhojPageTracking({product}: {product: TrackProduct}) {
   useEffect(() => {
-    const base = `${product.id}:${product.variantId || ''}:${Date.now()}`;
     trackKhojActivity({
       eventType: 'page_viewed',
-      eventId: `hydrogen_page:${base}`,
+      eventId: khojTrackingEventId('page'),
     });
     trackKhojActivity({
       eventType: 'product_viewed',
-      eventId: `hydrogen_product:${base}`,
+      eventId: khojTrackingEventId('viewcontent'),
       product,
     });
   }, [product.id, product.variantId]);

@@ -14,6 +14,7 @@ import {
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {
   KhojPageTracking,
+  khojTrackingEventId,
   trackKhojActivity,
   type TrackEvent,
 } from '~/components/KhojTracking';
@@ -152,7 +153,7 @@ export default function Product() {
 
   const addToCartTracking = () => ({
     eventType: 'product_added_to_cart',
-    eventId: `hydrogen_atc:${selectedVariant?.id || product.id}:${Date.now()}`,
+    eventId: khojTrackingEventId('addtocart'),
     product: trackingProduct,
     items: [trackingProduct],
     totalPrice: selectedVariant?.price,
