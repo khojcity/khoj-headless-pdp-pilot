@@ -2,13 +2,15 @@ import {redirect} from 'react-router';
 import type {Route} from './+types/cart.bridge';
 
 type AjaxCart = {
-  items?: Array<{
+  items?: AjaxCartItem[];
+  note?: string | null;
+};
+
+type AjaxCartItem = {
     id?: number | string;
     variant_id?: number | string;
     quantity?: number | string;
     properties?: Record<string, unknown> | null;
-  }>;
-  note?: string | null;
 };
 
 const MAX_BRIDGE_LINES = 50;
@@ -132,7 +134,7 @@ function normalizeNumericId(value: unknown) {
   return /^\d+$/.test(id) ? id : '';
 }
 
-function propertiesToAttributes(properties: AjaxCart['items'][number]['properties']) {
+function propertiesToAttributes(properties: AjaxCartItem['properties']) {
   if (!properties || typeof properties !== 'object') return [];
 
   return Object.entries(properties)

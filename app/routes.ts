@@ -8,6 +8,7 @@ import {hydrogenRoutes} from '@shopify/hydrogen';
 export default hydrogenRoutes([
   index('routes/_index.tsx'),
   route('products/:handle', 'routes/products.$handle.tsx'),
+  route('collections/:handle', 'routes/collections.$handle.tsx'),
   route('cart', 'routes/cart.tsx'),
   route('cart/bridge', 'routes/cart.bridge.tsx'),
   route('robots.txt', 'routes/[robots.txt].tsx'),
