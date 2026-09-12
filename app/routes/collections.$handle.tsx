@@ -14,6 +14,52 @@ const MAIN_STORE_COLLECTION_URL =
   'https://www.khoj.city/collections/ganapati-trunk-of-triumph';
 const GANAPATI_COLLECTION_TITLE = 'Ganapati: Trunk of Triumph';
 const MIGRATED_COLLECTION_HANDLES = new Set(['ganapati-trunk-of-triumph']);
+const GANAPATI_PRODUCT_DISPLAY_TITLES: Record<string, string> = {
+  'mumbai-cha-ganesha-handpainted-necklace-031-khoj-city':
+    'Ambikeya Ganesha Necklace',
+  'ambikeya-mumbai-cha-ganesha-traditional-white-hand-painted-earrings-hp-er':
+    'Ambikeya Ganesha Earrings',
+  'ambikeya-mumbai-cha-ganesha-traditional-multi-color-handmade-necklace-set-hp-np':
+    'Ambikeya Ganesha Necklace Set',
+  'mumbai-cha-ganesha-handpainted-necklace-029-khoj-city':
+    'Amod Ganesha Necklace',
+  'mumbai-cha-ganesha-handpainted-necklace-set-027-khoj-city':
+    'Anav Ganesha Necklace',
+  'mumbai-cha-ganesha-handpainted-necklace-035-khoj-city':
+    'Gajaraj Ganesha Necklace',
+  'mumbai-cha-ganesha-handpainted-earrings-050-khoj-city':
+    'Ganapati Ganesha Earrings',
+  'mumbai-cha-ganesha-handpainted-necklace-049-khoj-city':
+    'Ganapati Ganesha Necklace',
+  'ganapati-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np':
+    'Ganapati Ganesha Necklace Set',
+  'mumbai-cha-ganesha-handpainted-necklace-set-025-khoj-city':
+    'Ganarajya Ganesha Necklace',
+  'mumbai-cha-ganesha-handpainted-earrings-033-khoj-city':
+    'Ganarajya Ganesha Earrings',
+  'mumbai-cha-ganesha-handpainted-necklace-set-026-khoj-city':
+    'Gaurisuta Ganesha Necklace',
+  'mumbai-cha-ganesha-handpainted-earrings-052-khoj-city':
+    'Geet Ganesha Earrings',
+  'mumbai-cha-ganesha-handpainted-necklace-053-khoj-city':
+    'Geet Ganesha Necklace',
+  'geet-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np':
+    'Geet Ganesha Necklace Set',
+  'mumbai-cha-ganesha-handpainted-necklace-030-khoj-city':
+    'Lambodar Ganesha Necklace',
+  'lambodar-mumbai-cha-ganesha-traditional-multi-color-handmade-necklace-set-hp-np':
+    'Lambodar Ganesha Necklace Set',
+  'mumbai-cha-ganesha-handpainted-earrings-051-khoj-city':
+    'Taandav Ganesha Earrings',
+  'mumbai-cha-ganesha-handpainted-necklace-054-khoj-city':
+    'Taandav Ganesha Necklace',
+  'taandav-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np':
+    'Taandav Ganesha Necklace Set',
+  'mumbai-cha-ganesha-handpainted-necklace-set-028-khoj-city':
+    'Multicolour Ganesha Necklace',
+  'mumbai-cha-ganesha-handpainted-necklace-032-khoj-city':
+    'Vinayaka Red Ganesha Necklace',
+};
 
 type MoneyValue = {
   amount: string;
@@ -271,7 +317,7 @@ function CollectionProductCard({
       </Link>
       <div className="pilot-collection-card-body">
         <Link prefetch="intent" to={`/products/${product.handle}`}>
-          <h2>{shortProductTitle(product.title)}</h2>
+          <h2>{displayProductTitle(product)}</h2>
         </Link>
         <p>{categoryLabel(collectionCategory(product))} · Free delivery</p>
         <div className="pilot-collection-price">
@@ -346,6 +392,13 @@ function getSavings(variant?: CollectionProduct['selectedOrFirstAvailableVariant
     amount: compareAt - price,
     percent: Math.round(((compareAt - price) / compareAt) * 100),
   };
+}
+
+function displayProductTitle(product: CollectionProduct) {
+  return (
+    GANAPATI_PRODUCT_DISPLAY_TITLES[product.handle] ||
+    shortProductTitle(product.title)
+  );
 }
 
 function shortProductTitle(title: string) {
