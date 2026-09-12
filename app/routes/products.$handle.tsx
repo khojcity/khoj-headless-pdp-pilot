@@ -22,19 +22,13 @@ import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 
 const DEFAULT_PILOT_HANDLE =
   'mor-pankh-classic-multi-color-hand-painted-necklace-set-hp-np';
-const PILOT_HANDLES = new Set([
-  DEFAULT_PILOT_HANDLE,
-  'mor-pankh-neel-handpainted-choker-set',
-  'mumbai-cha-ganesha-handpainted-necklace-032-khoj-city',
-]);
 
 function mainStoreProductUrl(handle?: string) {
   return `https://www.khoj.city/products/${handle || DEFAULT_PILOT_HANDLE}`;
 }
 
 function pilotProductUrl(handle?: string) {
-  if (handle && PILOT_HANDLES.has(handle)) return `/products/${handle}`;
-  return mainStoreProductUrl(handle);
+  return handle ? `/products/${handle}` : mainStoreProductUrl(handle);
 }
 
 export const meta: Route.MetaFunction = ({data}) => {
@@ -61,7 +55,7 @@ export const meta: Route.MetaFunction = ({data}) => {
 export async function loader(args: Route.LoaderArgs) {
   const {handle} = args.params;
 
-  if (!handle || !PILOT_HANDLES.has(handle)) {
+  if (!handle) {
     return redirect(`/products/${DEFAULT_PILOT_HANDLE}`, 302);
   }
 
@@ -377,6 +371,7 @@ function ProductMedia({media, title}: {media: any[]; title: string}) {
             {active.sources.map((source: any) => (
               <source key={source.url} src={source.url} type={source.mimeType} />
             ))}
+            <track kind="captions" />
           </video>
         ) : active?.image ? (
           <Image
@@ -703,7 +698,9 @@ function getReviewSummary(product: any): ReviewSummary | null {
   try {
     const parsedRating = JSON.parse(ratingRaw) as {value?: string};
     rating = parsedRating.value || ratingRaw;
-  } catch {}
+  } catch {
+    rating = ratingRaw;
+  }
 
   return {
     rating,

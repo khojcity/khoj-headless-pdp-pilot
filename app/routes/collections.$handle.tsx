@@ -12,6 +12,7 @@ import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 
 const MAIN_STORE_COLLECTION_URL =
   'https://www.khoj.city/collections/ganapati-trunk-of-triumph';
+const GANAPATI_COLLECTION_TITLE = 'Ganapati: Trunk of Triumph';
 const MIGRATED_COLLECTION_HANDLES = new Set(['ganapati-trunk-of-triumph']);
 
 type MoneyValue = {
@@ -57,7 +58,7 @@ export const meta: Route.MetaFunction = ({data}) => {
   return [
     {title},
     {name: 'description', content: description},
-    {rel: 'canonical', href: MAIN_STORE_COLLECTION_URL},
+    {tagName: 'link', rel: 'canonical', href: MAIN_STORE_COLLECTION_URL},
     {property: 'og:title', content: title},
     {property: 'og:description', content: description},
     {property: 'og:type', content: 'website'},
@@ -133,7 +134,7 @@ export default function Collection() {
       <section className="pilot-collection-hero">
         <div>
           <p className="pilot-kicker">Ganesh jewellery</p>
-          <h1>{collection.title}</h1>
+          <h1>{GANAPATI_COLLECTION_TITLE}</h1>
           <p>
             Handpainted Ganapati jewellery for Ganesh Chaturthi, puja days,
             festive gifting, and traditional outfits.
@@ -171,7 +172,7 @@ export default function Collection() {
 
       <section
         className="pilot-collection-grid"
-        aria-label={`${collection.title} products`}
+        aria-label={`${GANAPATI_COLLECTION_TITLE} products`}
       >
         {visibleProducts.map((product, index) => (
           <CollectionProductCard
@@ -348,11 +349,21 @@ function getSavings(variant?: CollectionProduct['selectedOrFirstAvailableVariant
 }
 
 function shortProductTitle(title: string) {
-  return title
+  const cleanedTitle = title
     .replace(/^KHOJ\.CITY\s+Jewellery\s+/i, '')
+    .replace(/\s+Classic\b/i, '')
+    .replace(/\s+Traditional\b/i, '')
+    .replace(/\s+Multi Color\b/i, '')
+    .replace(/\s+White\b/i, '')
+    .replace(/\s+Orange\b/i, '')
+    .replace(/\s+Yellow\b/i, '')
+    .replace(/\s+Handmade\s*&\s*Hand Painted\b/i, '')
+    .replace(/\s+Hand Painted\b/i, '')
     .replace(/\s+for Girls\s*&\s*Women.*$/i, '')
     .replace(/\s*\([^)]*\)\s*$/i, '')
+    .replace(/\s+/g, ' ')
     .trim();
+  return cleanedTitle || title;
 }
 
 const GANAPATI_FAQS = [
