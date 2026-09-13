@@ -570,7 +570,7 @@ const GANAPATI_PRODUCT_COPY_BY_HANDLE: Record<string, GanapatiProductCopy> = {
   },
   'mumbai-cha-ganesha-handpainted-necklace-set-027-khoj-city': {
     name: 'Anav',
-    item: 'necklace',
+    item: 'necklace set',
   },
   'mumbai-cha-ganesha-handpainted-necklace-035-khoj-city': {
     name: 'Gajaraj',
@@ -590,7 +590,7 @@ const GANAPATI_PRODUCT_COPY_BY_HANDLE: Record<string, GanapatiProductCopy> = {
   },
   'mumbai-cha-ganesha-handpainted-necklace-set-025-khoj-city': {
     name: 'Ganarajya',
-    item: 'necklace',
+    item: 'necklace set',
   },
   'mumbai-cha-ganesha-handpainted-earrings-033-khoj-city': {
     name: 'Ganarajya',
@@ -598,7 +598,7 @@ const GANAPATI_PRODUCT_COPY_BY_HANDLE: Record<string, GanapatiProductCopy> = {
   },
   'mumbai-cha-ganesha-handpainted-necklace-set-026-khoj-city': {
     name: 'Gaurisuta',
-    item: 'necklace',
+    item: 'necklace set',
   },
   'mumbai-cha-ganesha-handpainted-earrings-052-khoj-city': {
     name: 'Geet',
@@ -634,7 +634,7 @@ const GANAPATI_PRODUCT_COPY_BY_HANDLE: Record<string, GanapatiProductCopy> = {
   },
   'mumbai-cha-ganesha-handpainted-necklace-set-028-khoj-city': {
     name: 'Multicolour',
-    item: 'necklace',
+    item: 'necklace set',
     accent: 'bright multicolour Ganesha-inspired artwork',
   },
   'mumbai-cha-ganesha-handpainted-necklace-032-khoj-city': {
@@ -745,10 +745,9 @@ function buildGanapatiProductContent({
         ? 'Pair of earrings'
         : 'Necklace';
   const artStyle = accent || 'multicolour Ganesha-inspired artwork';
-  const article = item === 'earrings' ? '' : 'A ';
 
   return {
-    intro: `${article}${name} Ganesha ${itemLabel} for Ganesh Chaturthi, puja days, festive outfits, and meaningful gifting.`,
+    intro: `${name} Ganesha ${itemLabel} for Ganesh Chaturthi, puja days, festive outfits, and meaningful gifting.`,
     highlights: [
       {
         title: 'Ganapati-inspired motif',
@@ -768,7 +767,7 @@ function buildGanapatiProductContent({
     ],
     storyTitle: `Made for ${name} Ganapati festive styling.`,
     storyBody: `This ${itemLabel} brings together a Mumbai cha Ganesha theme, ${artStyle}, and a lightweight handmade finish for traditional occasions.`,
-    detailsIntro: `${article}handmade ${itemLabel} with hand-painted Ganapati-inspired detailing, festive colour, and an easy-to-wear finish.`,
+    detailsIntro: `Handmade ${itemLabel} with hand-painted Ganapati-inspired detailing, festive colour, and an easy-to-wear finish.`,
     details: [
       {label: 'Craft', value: 'Hand-painted, handmade, and handcrafted'},
       {label: 'Includes', value: includes},

@@ -24,7 +24,7 @@ const GANAPATI_PRODUCT_DISPLAY_TITLES: Record<string, string> = {
   'mumbai-cha-ganesha-handpainted-necklace-029-khoj-city':
     'Amod Ganesha Necklace',
   'mumbai-cha-ganesha-handpainted-necklace-set-027-khoj-city':
-    'Anav Ganesha Necklace',
+    'Anav Ganesha Necklace Set',
   'mumbai-cha-ganesha-handpainted-necklace-035-khoj-city':
     'Gajaraj Ganesha Necklace',
   'mumbai-cha-ganesha-handpainted-earrings-050-khoj-city':
@@ -34,11 +34,11 @@ const GANAPATI_PRODUCT_DISPLAY_TITLES: Record<string, string> = {
   'ganapati-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np':
     'Ganapati Ganesha Necklace Set',
   'mumbai-cha-ganesha-handpainted-necklace-set-025-khoj-city':
-    'Ganarajya Ganesha Necklace',
+    'Ganarajya Ganesha Necklace Set',
   'mumbai-cha-ganesha-handpainted-earrings-033-khoj-city':
     'Ganarajya Ganesha Earrings',
   'mumbai-cha-ganesha-handpainted-necklace-set-026-khoj-city':
-    'Gaurisuta Ganesha Necklace',
+    'Gaurisuta Ganesha Necklace Set',
   'mumbai-cha-ganesha-handpainted-earrings-052-khoj-city':
     'Geet Ganesha Earrings',
   'mumbai-cha-ganesha-handpainted-necklace-053-khoj-city':
@@ -56,7 +56,7 @@ const GANAPATI_PRODUCT_DISPLAY_TITLES: Record<string, string> = {
   'taandav-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np':
     'Taandav Ganesha Necklace Set',
   'mumbai-cha-ganesha-handpainted-necklace-set-028-khoj-city':
-    'Multicolour Ganesha Necklace',
+    'Multicolour Ganesha Necklace Set',
   'mumbai-cha-ganesha-handpainted-necklace-032-khoj-city':
     'Vinayaka Red Ganesha Necklace',
 };
