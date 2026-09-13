@@ -506,6 +506,12 @@ type ProductPageContent = {
   details: Array<{label: string; value: string}>;
 };
 
+type GanapatiProductCopy = {
+  name: string;
+  item: 'necklace' | 'earrings' | 'necklace set';
+  accent?: string;
+};
+
 const DEFAULT_PRODUCT_CONTENT: ProductPageContent = {
   intro:
     'Peacock-inspired necklace set for sarees, kurtis, festive looks, and gifting.',
@@ -542,6 +548,100 @@ const DEFAULT_PRODUCT_CONTENT: ProductPageContent = {
     {label: 'Delivery', value: 'Free delivery across India'},
     {label: 'Payment', value: 'COD and prepaid options through Shopify checkout'},
   ],
+};
+
+const GANAPATI_PRODUCT_COPY_BY_HANDLE: Record<string, GanapatiProductCopy> = {
+  'mumbai-cha-ganesha-handpainted-necklace-031-khoj-city': {
+    name: 'Ambikeya',
+    item: 'necklace',
+  },
+  'ambikeya-mumbai-cha-ganesha-traditional-white-hand-painted-earrings-hp-er': {
+    name: 'Ambikeya',
+    item: 'earrings',
+    accent: 'white and festive Ganesha-inspired detail',
+  },
+  'ambikeya-mumbai-cha-ganesha-traditional-multi-color-handmade-necklace-set-hp-np': {
+    name: 'Ambikeya',
+    item: 'necklace set',
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-029-khoj-city': {
+    name: 'Amod',
+    item: 'necklace',
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-set-027-khoj-city': {
+    name: 'Anav',
+    item: 'necklace',
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-035-khoj-city': {
+    name: 'Gajaraj',
+    item: 'necklace',
+  },
+  'mumbai-cha-ganesha-handpainted-earrings-050-khoj-city': {
+    name: 'Ganapati',
+    item: 'earrings',
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-049-khoj-city': {
+    name: 'Ganapati',
+    item: 'necklace',
+  },
+  'ganapati-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np': {
+    name: 'Ganapati',
+    item: 'necklace set',
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-set-025-khoj-city': {
+    name: 'Ganarajya',
+    item: 'necklace',
+  },
+  'mumbai-cha-ganesha-handpainted-earrings-033-khoj-city': {
+    name: 'Ganarajya',
+    item: 'earrings',
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-set-026-khoj-city': {
+    name: 'Gaurisuta',
+    item: 'necklace',
+  },
+  'mumbai-cha-ganesha-handpainted-earrings-052-khoj-city': {
+    name: 'Geet',
+    item: 'earrings',
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-053-khoj-city': {
+    name: 'Geet',
+    item: 'necklace',
+  },
+  'geet-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np': {
+    name: 'Geet',
+    item: 'necklace set',
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-030-khoj-city': {
+    name: 'Lambodar',
+    item: 'necklace',
+  },
+  'lambodar-mumbai-cha-ganesha-traditional-multi-color-handmade-necklace-set-hp-np': {
+    name: 'Lambodar',
+    item: 'necklace set',
+  },
+  'mumbai-cha-ganesha-handpainted-earrings-051-khoj-city': {
+    name: 'Taandav',
+    item: 'earrings',
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-054-khoj-city': {
+    name: 'Taandav',
+    item: 'necklace',
+  },
+  'taandav-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np': {
+    name: 'Taandav',
+    item: 'necklace set',
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-set-028-khoj-city': {
+    name: 'Multicolour',
+    item: 'necklace',
+    accent: 'bright multicolour Ganesha-inspired artwork',
+  },
+  'mumbai-cha-ganesha-handpainted-necklace-032-khoj-city': {
+    name: 'Vinayaka',
+    item: 'necklace',
+    accent: 'red Ganesha-inspired artwork',
+  },
 };
 
 const PRODUCT_CONTENT_BY_HANDLE: Record<string, ProductPageContent> = {
@@ -623,7 +723,67 @@ const PRODUCT_CONTENT_BY_HANDLE: Record<string, ProductPageContent> = {
 };
 
 function getProductPageContent(handle: string) {
-  return PRODUCT_CONTENT_BY_HANDLE[handle] || DEFAULT_PRODUCT_CONTENT;
+  const customContent = PRODUCT_CONTENT_BY_HANDLE[handle];
+  if (customContent) return customContent;
+
+  const ganapatiCopy = GANAPATI_PRODUCT_COPY_BY_HANDLE[handle];
+  if (ganapatiCopy) return buildGanapatiProductContent(ganapatiCopy);
+
+  return DEFAULT_PRODUCT_CONTENT;
+}
+
+function buildGanapatiProductContent({
+  accent,
+  item,
+  name,
+}: GanapatiProductCopy): ProductPageContent {
+  const itemLabel = item === 'earrings' ? 'earrings' : item;
+  const includes =
+    item === 'necklace set'
+      ? 'Necklace and matching earrings'
+      : item === 'earrings'
+        ? 'Pair of earrings'
+        : 'Necklace';
+  const artStyle = accent || 'multicolour Ganesha-inspired artwork';
+  const article = item === 'earrings' ? '' : 'A ';
+
+  return {
+    intro: `${article}${name} Ganesha ${itemLabel} for Ganesh Chaturthi, puja days, festive outfits, and meaningful gifting.`,
+    highlights: [
+      {
+        title: 'Ganapati-inspired motif',
+        body: 'Adds an auspicious festive accent without overwhelming the outfit.',
+      },
+      {
+        title: 'Lightweight festive wear',
+        body:
+          item === 'earrings'
+            ? 'Made to bring colour and movement while staying comfortable through the day.'
+            : 'Designed to make a statement while staying comfortable for long festive days.',
+      },
+      {
+        title: 'Hand-painted finish',
+        body: 'Every piece carries small-batch handmade variation and craft detail.',
+      },
+    ],
+    storyTitle: `Made for ${name} Ganapati festive styling.`,
+    storyBody: `This ${itemLabel} brings together a Mumbai cha Ganesha theme, ${artStyle}, and a lightweight handmade finish for traditional occasions.`,
+    detailsIntro: `${article}handmade ${itemLabel} with hand-painted Ganapati-inspired detailing, festive colour, and an easy-to-wear finish.`,
+    details: [
+      {label: 'Craft', value: 'Hand-painted, handmade, and handcrafted'},
+      {label: 'Includes', value: includes},
+      {label: 'Material', value: 'Cardboard, fabric, acrylic paint, and glass beads'},
+      {label: 'Colour', value: artStyle},
+      {label: 'Weight', value: 'Approx. 50 grams'},
+      {label: 'Size', value: 'Approx. 20 x 4 inches'},
+      {
+        label: 'Best worn with',
+        value: 'Sarees, kurtis, festive wear, puja looks, and traditional occasions',
+      },
+      {label: 'Delivery', value: 'Free delivery across India'},
+      {label: 'Payment', value: 'COD and prepaid options through Shopify checkout'},
+    ],
+  };
 }
 
 function ProductDetails({content}: {content: ProductPageContent}) {
