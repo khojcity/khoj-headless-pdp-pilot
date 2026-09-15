@@ -228,6 +228,7 @@ export function trackKhojActivity(event: TrackEvent) {
   if (!endpoint || !token) return;
 
   rememberAttribution();
+  const visitorCustomerId = readCookie(VISITOR_CUSTOMER_COOKIE) || '';
 
   const payload = {
     token,
@@ -247,7 +248,15 @@ export function trackKhojActivity(event: TrackEvent) {
     screen_height: window.screen?.height,
     device_id: stableCookie(DEVICE_COOKIE),
     visitor_id: stableCookie(VISITOR_COOKIE),
-    visitor_customer_id: readCookie(VISITOR_CUSTOMER_COOKIE) || '',
+    visitor_customer_id: visitorCustomerId,
+    shopify_customer_id: visitorCustomerId,
+    external_id: visitorCustomerId,
+    customer: visitorCustomerId
+      ? {
+          id: visitorCustomerId,
+          shopify_customer_id: visitorCustomerId,
+        }
+      : undefined,
     product: event.product,
     items: event.items,
     total_price: event.totalPrice?.amount,
