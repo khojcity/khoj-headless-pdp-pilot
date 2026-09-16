@@ -10,6 +10,7 @@ const FBC_COOKIE = '_fbc';
 const COOKIE_MAX_AGE_SECONDS = 15552000;
 const SHARED_COOKIE_DOMAIN = '.khoj.city';
 const META_PIXEL_SCRIPT_SRC = 'https://connect.facebook.net/en_US/fbevents.js';
+const META_COOKIE_SUBDOMAIN_INDEX = '1';
 
 type Money = {
   amount: string;
@@ -98,6 +99,18 @@ function rememberAttribution() {
   if (fbclid && !readCookie(FBC_COOKIE)) {
     writeCookie(FBC_COOKIE, `fb.1.${Date.now()}.${fbclid}`);
   }
+}
+
+function metaRandomToken() {
+  return Math.floor(Math.random() * 2147483647).toString();
+}
+
+function ensureFbpCookie() {
+  const existing = readCookie(FBP_COOKIE);
+  if (existing) return decodeURIComponent(existing);
+  const value = `fb.${META_COOKIE_SUBDOMAIN_INDEX}.${Date.now()}.${metaRandomToken()}`;
+  writeCookie(FBP_COOKIE, value);
+  return value;
 }
 
 function installMetaPixelStub() {
@@ -229,6 +242,7 @@ export function trackKhojActivity(event: TrackEvent) {
 
   rememberAttribution();
   const visitorCustomerId = readCookie(VISITOR_CUSTOMER_COOKIE) || '';
+  const fbp = ensureFbpCookie();
 
   const payload = {
     token,
@@ -240,7 +254,7 @@ export function trackKhojActivity(event: TrackEvent) {
     referrer: document.referrer,
     oppref: readCookie(OPPREF_COOKIE) || '',
     obref: readCookie(OBREF_COOKIE) || '',
-    fbp: readCookie(FBP_COOKIE) || '',
+    fbp,
     fbc: readCookie(FBC_COOKIE) || '',
     user_agent: window.navigator.userAgent,
     language: window.navigator.language,
