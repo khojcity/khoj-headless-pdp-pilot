@@ -99,6 +99,7 @@ function rememberAttribution() {
   if (fbclid && !readCookie(FBC_COOKIE)) {
     writeCookie(FBC_COOKIE, `fb.1.${Date.now()}.${fbclid}`);
   }
+  return fbclid || '';
 }
 
 function metaRandomToken() {
@@ -234,15 +235,16 @@ function trackMetaPixelActivity(event: TrackEvent) {
 }
 
 export function trackKhojActivity(event: TrackEvent) {
+  const fbclid = rememberAttribution();
+  const fbp = ensureFbpCookie();
+
   trackMetaPixelActivity(event);
 
   const endpoint = window.ENV?.KHOJ_SITE_ACTIVITY_ENDPOINT;
   const token = window.ENV?.KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN;
   if (!endpoint || !token) return;
 
-  rememberAttribution();
   const visitorCustomerId = readCookie(VISITOR_CUSTOMER_COOKIE) || '';
-  const fbp = ensureFbpCookie();
 
   const payload = {
     token,
@@ -254,6 +256,7 @@ export function trackKhojActivity(event: TrackEvent) {
     referrer: document.referrer,
     oppref: readCookie(OPPREF_COOKIE) || '',
     obref: readCookie(OBREF_COOKIE) || '',
+    fbclid,
     fbp,
     fbc: readCookie(FBC_COOKIE) || '',
     user_agent: window.navigator.userAgent,
