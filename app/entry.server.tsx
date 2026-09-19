@@ -53,6 +53,7 @@ export default async function handleRequest(
       'https://www.google-analytics.com',
       'https://*.google-analytics.com',
       'https://www.google.com',
+      'https://www.google.co.in',
       'https://www.googleadservices.com',
       'https://ad.doubleclick.net',
       'https://googleads.g.doubleclick.net',
