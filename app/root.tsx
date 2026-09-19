@@ -108,6 +108,8 @@ export async function loader(args: Route.LoaderArgs) {
       endpoint: khojSiteActivityEndpoint(env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT),
       token: env.PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN || '',
       metaPixelId: env.PUBLIC_META_PIXEL_ID || '',
+      ga4MeasurementId: env.PUBLIC_GA4_MEASUREMENT_ID || '',
+      googleAdsId: env.PUBLIC_GOOGLE_ADS_ID || '',
     },
   };
 }
@@ -156,6 +158,8 @@ export function Layout({children}: {children?: React.ReactNode}) {
               KHOJ_SITE_ACTIVITY_ENDPOINT: data?.tracking.endpoint || '',
               KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN: data?.tracking.token || '',
               META_PIXEL_ID: data?.tracking.metaPixelId || '',
+              GA4_MEASUREMENT_ID: data?.tracking.ga4MeasurementId || '',
+              GOOGLE_ADS_ID: data?.tracking.googleAdsId || '',
             })}`,
           }}
         />

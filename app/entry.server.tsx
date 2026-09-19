@@ -25,6 +25,7 @@ export default async function handleRequest(
       "'unsafe-inline'",
       'https://cdn.shopify.com',
       'https://connect.facebook.net',
+      'https://www.googletagmanager.com',
     ],
     connectSrc: [
       'https://www.facebook.com',
@@ -32,6 +33,11 @@ export default async function handleRequest(
       'https://*.facebook.com',
       'https://*.run.app',
       'https://*.on.aws',
+      'https://www.googletagmanager.com',
+      'https://www.google-analytics.com',
+      'https://*.google-analytics.com',
+      'https://www.googleadservices.com',
+      'https://googleads.g.doubleclick.net',
     ],
     frameSrc: ['https://www.facebook.com', 'https://*.facebook.com'],
     imgSrc: [
@@ -40,6 +46,10 @@ export default async function handleRequest(
       'blob:',
       'https://cdn.shopify.com',
       'https://www.facebook.com',
+      'https://www.google-analytics.com',
+      'https://*.google-analytics.com',
+      'https://www.googleadservices.com',
+      'https://googleads.g.doubleclick.net',
     ],
   });
 

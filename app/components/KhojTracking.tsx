@@ -10,6 +10,7 @@ const FBC_COOKIE = '_fbc';
 const COOKIE_MAX_AGE_SECONDS = 15552000;
 const SHARED_COOKIE_DOMAIN = '.khoj.city';
 const META_PIXEL_SCRIPT_SRC = 'https://connect.facebook.net/en_US/fbevents.js';
+const GOOGLE_TAG_SCRIPT_SRC = 'https://www.googletagmanager.com/gtag/js';
 const META_COOKIE_SUBDOMAIN_INDEX = '1';
 
 type Money = {
@@ -47,6 +48,8 @@ type MetaPixel = {
   loaded?: boolean;
   version?: string;
 };
+
+type GoogleTag = (...args: unknown[]) => void;
 
 function randomId() {
   if (crypto.randomUUID) return crypto.randomUUID();
@@ -157,6 +160,44 @@ function ensureMetaPixel() {
   return fbq;
 }
 
+function ensureGoogleTag() {
+  const measurementIds = [
+    window.ENV?.GA4_MEASUREMENT_ID,
+    window.ENV?.GOOGLE_ADS_ID,
+  ].filter((id): id is string => Boolean(id));
+  const uniqueMeasurementIds = [...new Set(measurementIds)];
+  if (!uniqueMeasurementIds.length) return null;
+
+  const w = window as Window & {
+    dataLayer?: unknown[];
+    gtag?: GoogleTag;
+    __khojGoogleTagIds?: string;
+  };
+  w.dataLayer ||= [];
+  w.gtag ||= function (...args: unknown[]) {
+    w.dataLayer?.push(args);
+  };
+
+  const configuredIds = uniqueMeasurementIds.join(',');
+  if (w.__khojGoogleTagIds !== configuredIds) {
+    w.gtag('js', new Date());
+    uniqueMeasurementIds.forEach((id) => {
+      w.gtag?.('config', id, {send_page_view: false});
+    });
+    w.__khojGoogleTagIds = configuredIds;
+  }
+
+  if (!document.querySelector('script[data-khoj-google-tag]')) {
+    const script = document.createElement('script');
+    script.async = true;
+    script.dataset.khojGoogleTag = 'true';
+    script.src = `${GOOGLE_TAG_SCRIPT_SRC}?id=${encodeURIComponent(uniqueMeasurementIds[0])}`;
+    document.head.appendChild(script);
+  }
+
+  return w.gtag;
+}
+
 function amount(money?: Money | null) {
   const value = Number(money?.amount);
   return Number.isFinite(value) ? value : undefined;
@@ -203,6 +244,37 @@ function metaProductParams(event: TrackEvent) {
   });
 }
 
+function googleProduct(product: TrackProduct) {
+  return cleanParams({
+    item_id: shopifyNumericId(product.variantId || product.id),
+    item_name: product.title,
+    item_brand: product.vendor,
+    item_category: product.productType,
+    item_variant: product.variantTitle,
+    price: amount(product.price),
+    quantity: product.quantity || 1,
+    google_business_vertical: 'retail',
+  });
+}
+
+function googleEcommerceParams(event: TrackEvent) {
+  const items = event.items || (event.product ? [event.product] : []);
+  const value =
+    amount(event.totalPrice) ||
+    items.reduce((total, item) => {
+      const itemPrice = amount(item.price) || 0;
+      return total + itemPrice * (item.quantity || 1);
+    }, 0);
+
+  return cleanParams({
+    currency:
+      event.totalPrice?.currencyCode || items[0]?.price?.currencyCode || 'INR',
+    value,
+    items: items.map(googleProduct),
+    khoj_event_id: event.eventId,
+  });
+}
+
 function shopifyNumericId(id?: string) {
   return id?.split('/').pop() || id;
 }
@@ -234,11 +306,36 @@ function trackMetaPixelActivity(event: TrackEvent) {
   // limited to the pre-checkout storefront funnel to avoid duplicate signals.
 }
 
+function trackGoogleActivity(event: TrackEvent) {
+  const gtag = ensureGoogleTag();
+  if (!gtag) return;
+
+  if (event.eventType === 'page_viewed') {
+    gtag('event', 'page_view', {
+      page_title: document.title,
+      page_location: window.location.href,
+      page_referrer: document.referrer,
+      khoj_event_id: event.eventId,
+    });
+    return;
+  }
+
+  if (event.eventType === 'product_viewed') {
+    gtag('event', 'view_item', googleEcommerceParams(event));
+    return;
+  }
+
+  if (event.eventType === 'product_added_to_cart') {
+    gtag('event', 'add_to_cart', googleEcommerceParams(event));
+  }
+}
+
 export function trackKhojActivity(event: TrackEvent) {
   const fbclid = rememberAttribution();
   const fbp = ensureFbpCookie();
 
   trackMetaPixelActivity(event);
+  trackGoogleActivity(event);
 
   const endpoint = window.ENV?.KHOJ_SITE_ACTIVITY_ENDPOINT;
   const token = window.ENV?.KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN;
@@ -312,8 +409,13 @@ declare global {
       KHOJ_SITE_ACTIVITY_ENDPOINT?: string;
       KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN?: string;
       META_PIXEL_ID?: string;
+      GA4_MEASUREMENT_ID?: string;
+      GOOGLE_ADS_ID?: string;
     };
     fbq?: MetaPixel;
     __khojMetaPixelId?: string;
+    dataLayer?: unknown[];
+    gtag?: GoogleTag;
+    __khojGoogleTagIds?: string;
   }
 }

@@ -17,5 +17,7 @@ declare global {
     PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT?: string;
     PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN?: string;
     PUBLIC_META_PIXEL_ID?: string;
+    PUBLIC_GA4_MEASUREMENT_ID?: string;
+    PUBLIC_GOOGLE_ADS_ID?: string;
   }
 }
