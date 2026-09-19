@@ -19,6 +19,7 @@ import {
   type TrackEvent,
 } from '~/components/KhojTracking';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
+import {isShopifyDefaultTitleOption} from '~/lib/variants';
 
 const DEFAULT_PILOT_HANDLE =
   'mor-pankh-classic-multi-color-hand-painted-necklace-set-hp-np';
@@ -57,6 +58,13 @@ export async function loader(args: Route.LoaderArgs) {
 
   if (!handle) {
     return redirect(`/products/${DEFAULT_PILOT_HANDLE}`, 302);
+  }
+
+  const url = new URL(args.request.url);
+  if (url.searchParams.get('Title') === 'Default Title') {
+    url.searchParams.delete('Title');
+    const search = url.searchParams.toString();
+    return redirect(`${url.pathname}${search ? `?${search}` : ''}`, 301);
   }
 
   const criticalData = await loadCriticalData(args);
@@ -111,7 +119,11 @@ export default function Product() {
     getAdjacentAndFirstAvailableVariants(product),
   );
 
-  useSelectedOptionInUrlParam(selectedVariant?.selectedOptions || []);
+  useSelectedOptionInUrlParam(
+    (selectedVariant?.selectedOptions || []).filter(
+      (option) => !isShopifyDefaultTitleOption(option),
+    ),
+  );
 
   const productOptions = getProductOptions({
     ...product,

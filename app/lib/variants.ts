@@ -2,6 +2,13 @@ import {useLocation} from 'react-router';
 import type {SelectedOption} from '@shopify/hydrogen/storefront-api-types';
 import {useMemo} from 'react';
 
+export function isShopifyDefaultTitleOption(option: {
+  name: string;
+  value: string;
+}) {
+  return option.name === 'Title' && option.value === 'Default Title';
+}
+
 export function useVariantUrl(
   handle: string,
   selectedOptions?: SelectedOption[],
@@ -37,6 +44,7 @@ export function getVariantUrl({
     : `/products/${handle}`;
 
   selectedOptions?.forEach((option) => {
+    if (isShopifyDefaultTitleOption(option)) return;
     searchParams.set(option.name, option.value);
   });
 
