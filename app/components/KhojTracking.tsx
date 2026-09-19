@@ -177,8 +177,8 @@ function ensureGoogleTag() {
     __khojGoogleTagIds?: string;
   };
   w.dataLayer ||= [];
-  w.gtag ||= function (...args: unknown[]) {
-    w.dataLayer?.push(args);
+  w.gtag ||= function () {
+    w.dataLayer?.push(arguments);
   };
 
   const configuredIds = uniqueMeasurementIds.join(',');
