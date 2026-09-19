@@ -51,6 +51,13 @@ type MetaPixel = {
 
 type GoogleTag = (...args: unknown[]) => void;
 
+function googleDestinationIds() {
+  return [
+    window.ENV?.GA4_MEASUREMENT_ID,
+    window.ENV?.GOOGLE_ADS_ID,
+  ].filter((id): id is string => Boolean(id));
+}
+
 function randomId() {
   if (crypto.randomUUID) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -161,11 +168,7 @@ function ensureMetaPixel() {
 }
 
 function ensureGoogleTag() {
-  const measurementIds = [
-    window.ENV?.GA4_MEASUREMENT_ID,
-    window.ENV?.GOOGLE_ADS_ID,
-  ].filter((id): id is string => Boolean(id));
-  const uniqueMeasurementIds = [...new Set(measurementIds)];
+  const uniqueMeasurementIds = [...new Set(googleDestinationIds())];
   if (!uniqueMeasurementIds.length) return null;
 
   const w = window as Window & {
@@ -316,17 +319,27 @@ function trackGoogleActivity(event: TrackEvent) {
       page_location: window.location.href,
       page_referrer: document.referrer,
       khoj_event_id: event.eventId,
+      send_to: googleDestinationIds(),
+      transport_type: 'beacon',
     });
     return;
   }
 
   if (event.eventType === 'product_viewed') {
-    gtag('event', 'view_item', googleEcommerceParams(event));
+    gtag('event', 'view_item', {
+      ...googleEcommerceParams(event),
+      send_to: googleDestinationIds(),
+      transport_type: 'beacon',
+    });
     return;
   }
 
   if (event.eventType === 'product_added_to_cart') {
-    gtag('event', 'add_to_cart', googleEcommerceParams(event));
+    gtag('event', 'add_to_cart', {
+      ...googleEcommerceParams(event),
+      send_to: googleDestinationIds(),
+      transport_type: 'beacon',
+    });
   }
 }
 
