@@ -266,6 +266,19 @@ function CollectionProducts({
   const [pageInfo, setPageInfo] = useState(connection.pageInfo);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('cursor') && !params.has('direction')) return;
+    params.delete('cursor');
+    params.delete('direction');
+    const search = params.toString();
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`,
+    );
+  }, []);
+
+  useEffect(() => {
     setProducts(connection.nodes);
     setPageInfo(connection.pageInfo);
     setCategory('all');
