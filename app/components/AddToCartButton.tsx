@@ -38,7 +38,15 @@ export function AddToCartButton({
           <button
             className={className}
             type="submit"
-            onClick={onClick}
+            onClick={(event) => {
+              if (!onClick) return;
+
+              event.preventDefault();
+              onClick();
+
+              const form = event.currentTarget.form;
+              window.setTimeout(() => form?.requestSubmit(), 200);
+            }}
             disabled={disabled || fetcher.state !== 'idle'}
           >
             {children}
