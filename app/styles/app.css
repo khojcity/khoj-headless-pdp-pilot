@@ -957,18 +957,15 @@ button.reset:hover:not(:has(> *)) {
   max-width: 1180px;
 }
 
-.pilot-collection-load {
-  background: #fff;
-  border: 1px solid #d9d5ca;
+.pilot-collection-scroll-status {
   color: #142016;
   display: block;
-  font-size: 0.82rem;
-  font-weight: 800;
-  margin: 18px auto;
-  max-width: 260px;
-  padding: 12px 18px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin: 22px auto 0;
+  min-height: 20px;
+  padding: 8px;
   text-align: center;
-  text-transform: uppercase;
 }
 
 .pilot-collection > a {

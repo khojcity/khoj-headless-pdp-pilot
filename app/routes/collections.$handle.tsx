@@ -1,12 +1,17 @@
-import {useEffect, useMemo, useState} from 'react';
-import type {ComponentType, ReactNode} from 'react';
-import {Link, data, redirect, useLoaderData} from 'react-router';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {
+  Link,
+  data,
+  redirect,
+  useFetcher,
+  useLoaderData,
+  useLocation,
+} from 'react-router';
 import type {Route} from './+types/collections.$handle';
 import {
   Analytics,
   Image,
   Money,
-  Pagination,
   getPaginationVariables,
 } from '@shopify/hydrogen';
 import {AddToCartButton} from '~/components/AddToCartButton';
@@ -79,7 +84,7 @@ type CollectionProduct = {
   vendor: string;
   productType: string;
   featuredImage?: {
-    id?: string;
+    id?: string | null;
     altText?: string | null;
     url: string;
     width?: number | null;
@@ -183,17 +188,11 @@ export default function Collection() {
         </div>
       </section>
 
-      <Pagination<CollectionProduct> connection={collection.products as any}>
-        {({nodes, isLoading, PreviousLink, NextLink}) => (
-          <CollectionProducts
-            displayTitle={displayTitle}
-            isLoading={isLoading}
-            NextLink={NextLink}
-            PreviousLink={PreviousLink}
-            products={nodes}
-          />
-        )}
-      </Pagination>
+      <CollectionProducts
+        collectionId={collection.id}
+        connection={collection.products}
+        displayTitle={displayTitle}
+      />
 
       {isGanapati ? (
         <>
@@ -241,20 +240,75 @@ export default function Collection() {
 }
 
 function CollectionProducts({
+  collectionId,
+  connection,
   displayTitle,
-  isLoading,
-  NextLink,
-  PreviousLink,
-  products,
 }: {
+  collectionId: string;
+  connection: {
+    nodes: CollectionProduct[];
+    pageInfo: {
+      endCursor?: string | null;
+      hasNextPage: boolean;
+    };
+  };
   displayTitle: string;
-  isLoading: boolean;
-  NextLink: ComponentType<{children: ReactNode}>;
-  PreviousLink: ComponentType<{children: ReactNode}>;
-  products: CollectionProduct[];
 }) {
+  const fetcher = useFetcher<typeof loader>();
+  const location = useLocation();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const requestedCursorRef = useRef('');
   const [category, setCategory] = useState('all');
   const [sort, setSort] = useState('featured');
+  const [products, setProducts] = useState<CollectionProduct[]>(
+    connection.nodes,
+  );
+  const [pageInfo, setPageInfo] = useState(connection.pageInfo);
+
+  useEffect(() => {
+    setProducts(connection.nodes);
+    setPageInfo(connection.pageInfo);
+    setCategory('all');
+    setSort('featured');
+    requestedCursorRef.current = '';
+  }, [collectionId, connection.nodes, connection.pageInfo]);
+
+  useEffect(() => {
+    const nextConnection = fetcher.data?.collection?.products;
+    if (!nextConnection || fetcher.state !== 'idle') return;
+
+    setProducts((current) => {
+      const knownIds = new Set(current.map((product) => product.id));
+      return [
+        ...current,
+        ...(nextConnection.nodes as CollectionProduct[]).filter(
+          (product) => !knownIds.has(product.id),
+        ),
+      ];
+    });
+    setPageInfo(nextConnection.pageInfo);
+  }, [fetcher.data, fetcher.state]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !pageInfo.hasNextPage || !pageInfo.endCursor) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting || fetcher.state !== 'idle') return;
+        if (requestedCursorRef.current === pageInfo.endCursor) return;
+        const params = new URLSearchParams(location.search);
+        params.set('direction', 'next');
+        params.set('cursor', pageInfo.endCursor || '');
+        requestedCursorRef.current = pageInfo.endCursor || '';
+        fetcher.load(`${location.pathname}?${params.toString()}`);
+      },
+      {rootMargin: '500px 0px'},
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [fetcher, location.pathname, location.search, pageInfo]);
+
   const categories = useMemo(() => {
     const found = new Set<string>();
     products.forEach((product) => found.add(collectionCategory(product)));
@@ -272,11 +326,6 @@ function CollectionProducts({
 
   return (
     <>
-      <PreviousLink>
-        <span className="pilot-collection-load">
-          {isLoading ? 'Loading...' : 'Load previous products'}
-        </span>
-      </PreviousLink>
       <section
         className="pilot-collection-toolbar"
         aria-label="Collection controls"
@@ -318,11 +367,13 @@ function CollectionProducts({
           />
         ))}
       </section>
-      <NextLink>
-        <span className="pilot-collection-load">
-          {isLoading ? 'Loading...' : 'Load more products'}
-        </span>
-      </NextLink>
+      <div className="pilot-collection-scroll-status" ref={loadMoreRef}>
+        {fetcher.state !== 'idle'
+          ? 'Loading more products...'
+          : pageInfo.hasNextPage
+            ? ''
+            : 'You have reached the end'}
+      </div>
     </>
   );
 }
