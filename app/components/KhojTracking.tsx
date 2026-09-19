@@ -11,6 +11,7 @@ const COOKIE_MAX_AGE_SECONDS = 15552000;
 const SHARED_COOKIE_DOMAIN = '.khoj.city';
 const META_PIXEL_SCRIPT_SRC = 'https://connect.facebook.net/en_US/fbevents.js';
 const GOOGLE_TAG_SCRIPT_SRC = 'https://www.googletagmanager.com/gtag/js';
+const GOOGLE_DATA_LAYER = 'khojGoogleDataLayer';
 const META_COOKIE_SUBDOMAIN_INDEX = '1';
 
 type Money = {
@@ -172,20 +173,20 @@ function ensureGoogleTag() {
   if (!uniqueMeasurementIds.length) return null;
 
   const w = window as Window & {
-    dataLayer?: unknown[];
-    gtag?: GoogleTag;
+    khojGoogleDataLayer?: unknown[];
+    khojGtag?: GoogleTag;
     __khojGoogleTagIds?: string;
   };
-  w.dataLayer ||= [];
-  w.gtag ||= function () {
-    w.dataLayer?.push(arguments);
+  w.khojGoogleDataLayer ||= [];
+  w.khojGtag ||= function () {
+    w.khojGoogleDataLayer?.push(arguments);
   };
 
   const configuredIds = uniqueMeasurementIds.join(',');
   if (w.__khojGoogleTagIds !== configuredIds) {
-    w.gtag('js', new Date());
+    w.khojGtag('js', new Date());
     uniqueMeasurementIds.forEach((id) => {
-      w.gtag?.('config', id, {send_page_view: false});
+      w.khojGtag?.('config', id, {send_page_view: false});
     });
     w.__khojGoogleTagIds = configuredIds;
   }
@@ -194,11 +195,11 @@ function ensureGoogleTag() {
     const script = document.createElement('script');
     script.async = true;
     script.dataset.khojGoogleTag = 'true';
-    script.src = `${GOOGLE_TAG_SCRIPT_SRC}?id=${encodeURIComponent(uniqueMeasurementIds[0])}`;
+    script.src = `${GOOGLE_TAG_SCRIPT_SRC}?id=${encodeURIComponent(uniqueMeasurementIds[0])}&l=${GOOGLE_DATA_LAYER}`;
     document.head.appendChild(script);
   }
 
-  return w.gtag;
+  return w.khojGtag;
 }
 
 function amount(money?: Money | null) {
@@ -427,8 +428,8 @@ declare global {
     };
     fbq?: MetaPixel;
     __khojMetaPixelId?: string;
-    dataLayer?: unknown[];
-    gtag?: GoogleTag;
+    khojGoogleDataLayer?: unknown[];
+    khojGtag?: GoogleTag;
     __khojGoogleTagIds?: string;
   }
 }
