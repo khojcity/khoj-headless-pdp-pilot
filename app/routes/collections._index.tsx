@@ -1,56 +1,65 @@
-import {useLoaderData, Link} from 'react-router';
+import {useEffect} from 'react';
+import {Link, useLoaderData} from 'react-router';
 import type {Route} from './+types/collections._index';
 import {getPaginationVariables, Image} from '@shopify/hydrogen';
 import type {CollectionFragment} from 'storefrontapi.generated';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+import {
+  khojTrackingEventId,
+  trackKhojActivity,
+} from '~/components/KhojTracking';
 
-export async function loader(args: Route.LoaderArgs) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
+const COLLECTIONS_URL = 'https://shop.khoj.city/collections';
 
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
+export const meta: Route.MetaFunction = () => [
+  {title: 'Handpainted Jewellery Collections | KHOJ.CITY'},
+  {
+    name: 'description',
+    content:
+      'Explore KHOJ.CITY handpainted jewellery collections, including necklaces, earrings, festive sets, and wearable Indian art.',
+  },
+  {tagName: 'link', rel: 'canonical', href: COLLECTIONS_URL},
+  {
+    property: 'og:title',
+    content: 'Handpainted Jewellery Collections | KHOJ.CITY',
+  },
+  {property: 'og:type', content: 'website'},
+  {property: 'og:url', content: COLLECTIONS_URL},
+];
 
-  return {...deferredData, ...criticalData};
-}
-
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- */
-async function loadCriticalData({context, request}: Route.LoaderArgs) {
-  const paginationVariables = getPaginationVariables(request, {
-    pageBy: 4,
+export async function loader({context, request}: Route.LoaderArgs) {
+  const paginationVariables = getPaginationVariables(request, {pageBy: 12});
+  const {collections} = await context.storefront.query(COLLECTIONS_QUERY, {
+    cache: context.storefront.CacheShort(),
+    variables: paginationVariables,
   });
-
-  const [{collections}] = await Promise.all([
-    context.storefront.query(COLLECTIONS_QUERY, {
-      variables: paginationVariables,
-    }),
-    // Add other queries here, so that they are loaded in parallel
-  ]);
-
   return {collections};
-}
-
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- */
-function loadDeferredData({context}: Route.LoaderArgs) {
-  return {};
 }
 
 export default function Collections() {
   const {collections} = useLoaderData<typeof loader>();
 
+  useEffect(() => {
+    trackKhojActivity({
+      eventType: 'page_viewed',
+      eventId: khojTrackingEventId('collections'),
+    });
+  }, []);
+
   return (
-    <div className="collections">
-      <h1>Collections</h1>
+    <main className="pilot-collection-directory">
+      <header className="pilot-collection-directory-header">
+        <p className="pilot-kicker">Browse by story</p>
+        <h1>Jewellery collections</h1>
+        <p>
+          Discover handpainted jewellery shaped by Indian art, festive colour,
+          and small-batch craft.
+        </p>
+      </header>
       <PaginatedResourceSection<CollectionFragment>
+        ariaLabel="Jewellery collections"
         connection={collections}
-        resourcesClassName="collections-grid"
+        resourcesClassName="pilot-collection-directory-grid"
       >
         {({node: collection, index}) => (
           <CollectionItem
@@ -60,7 +69,7 @@ export default function Collections() {
           />
         )}
       </PaginatedResourceSection>
-    </div>
+    </main>
   );
 }
 
@@ -73,21 +82,28 @@ function CollectionItem({
 }) {
   return (
     <Link
-      className="collection-item"
-      key={collection.id}
+      className="pilot-collection-directory-card"
       to={`/collections/${collection.handle}`}
       prefetch="intent"
     >
-      {collection?.image && (
-        <Image
-          alt={collection.image.altText || collection.title}
-          aspectRatio="1/1"
-          data={collection.image}
-          loading={index < 3 ? 'eager' : undefined}
-          sizes="(min-width: 45em) 400px, 100vw"
-        />
-      )}
-      <h5>{collection.title}</h5>
+      <div className="pilot-collection-directory-media">
+        {collection.image ? (
+          <Image
+            alt={collection.image.altText || collection.title}
+            aspectRatio="1/1"
+            data={collection.image}
+            loading={index < 4 ? 'eager' : 'lazy'}
+            sizes="(min-width: 980px) 25vw, (min-width: 640px) 33vw, 50vw"
+          />
+        ) : (
+          <span>{collection.title}</span>
+        )}
+      </div>
+      <div>
+        <h2>{collection.title}</h2>
+        {collection.description ? <p>{collection.description}</p> : null}
+        <span>Shop collection</span>
+      </div>
     </Link>
   );
 }
@@ -97,6 +113,7 @@ const COLLECTIONS_QUERY = `#graphql
     id
     title
     handle
+    description
     image {
       id
       url
@@ -114,10 +131,11 @@ const COLLECTIONS_QUERY = `#graphql
     $startCursor: String
   ) @inContext(country: $country, language: $language) {
     collections(
-      first: $first,
-      last: $last,
-      before: $startCursor,
+      first: $first
+      last: $last
+      before: $startCursor
       after: $endCursor
+      sortKey: TITLE
     ) {
       nodes {
         ...Collection

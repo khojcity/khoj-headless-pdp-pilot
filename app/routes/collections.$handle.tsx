@@ -1,7 +1,14 @@
 import {useEffect, useMemo, useState} from 'react';
+import type {ComponentType, ReactNode} from 'react';
 import {Link, data, redirect, useLoaderData} from 'react-router';
 import type {Route} from './+types/collections.$handle';
-import {Analytics, Image, Money} from '@shopify/hydrogen';
+import {
+  Analytics,
+  Image,
+  Money,
+  Pagination,
+  getPaginationVariables,
+} from '@shopify/hydrogen';
 import {AddToCartButton} from '~/components/AddToCartButton';
 import {
   khojTrackingEventId,
@@ -10,10 +17,9 @@ import {
 } from '~/components/KhojTracking';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 
-const MAIN_STORE_COLLECTION_URL =
-  'https://www.khoj.city/collections/ganapati-trunk-of-triumph';
+const SHOP_ORIGIN = 'https://shop.khoj.city';
+const GANAPATI_COLLECTION_HANDLE = 'ganapati-trunk-of-triumph';
 const GANAPATI_COLLECTION_TITLE = 'Ganapati: Trunk of Triumph';
-const MIGRATED_COLLECTION_HANDLES = new Set(['ganapati-trunk-of-triumph']);
 const GANAPATI_PRODUCT_DISPLAY_TITLES: Record<string, string> = {
   'mumbai-cha-ganesha-handpainted-necklace-031-khoj-city':
     'Ambikeya Ganesha Necklace',
@@ -93,31 +99,35 @@ type CollectionProduct = {
 
 export const meta: Route.MetaFunction = ({data}) => {
   const collection = data?.collection;
+  if (!collection) return [{title: 'Collection not found | KHOJ.CITY'}];
+
   const title =
     collection?.seo?.title ||
-    'Ganesh Jewellery 2026 | Handpainted Ganapati by Khoj.City';
+    `${collection.title} | Handpainted Jewellery by KHOJ.CITY`;
   const description =
     collection?.seo?.description ||
     collection?.description ||
-    'Handpainted Ganesh jewellery for Ganesh Chaturthi, devotional wear, and bridal occasions.';
+    `Shop ${collection.title}, handmade and handpainted jewellery by KHOJ.CITY.`;
+  const canonicalUrl = `${SHOP_ORIGIN}/collections/${collection.handle}`;
 
   return [
     {title},
     {name: 'description', content: description},
-    {tagName: 'link', rel: 'canonical', href: MAIN_STORE_COLLECTION_URL},
+    {tagName: 'link', rel: 'canonical', href: canonicalUrl},
     {property: 'og:title', content: title},
     {property: 'og:description', content: description},
     {property: 'og:type', content: 'website'},
-    {property: 'og:url', content: MAIN_STORE_COLLECTION_URL},
+    {property: 'og:url', content: canonicalUrl},
+    ...(collection.image?.url
+      ? [{property: 'og:image', content: collection.image.url}]
+      : []),
   ];
 };
 
 export async function loader(args: Route.LoaderArgs) {
   const {handle} = args.params;
 
-  if (!handle || !MIGRATED_COLLECTION_HANDLES.has(handle)) {
-    return redirect(MAIN_STORE_COLLECTION_URL, 302);
-  }
+  if (!handle) return redirect('/collections', 302);
 
   const {collection} = await loadCollection(args);
   return data({collection});
@@ -129,9 +139,10 @@ async function loadCollection({context, params, request}: Route.LoaderArgs) {
 
   if (!handle) throw redirect('/collections');
 
+  const paginationVariables = getPaginationVariables(request, {pageBy: 24});
   const {collection} = await storefront.query(COLLECTION_QUERY, {
     cache: storefront.CacheShort(),
-    variables: {handle, first: 50},
+    variables: {handle, ...paginationVariables},
   });
 
   if (!collection) {
@@ -144,12 +155,10 @@ async function loadCollection({context, params, request}: Route.LoaderArgs) {
 
 export default function Collection() {
   const {collection} = useLoaderData<typeof loader>();
-  const products = useMemo(
-    () => (collection.products.nodes || []) as CollectionProduct[],
-    [collection.products.nodes],
-  );
-  const [category, setCategory] = useState('all');
-  const [sort, setSort] = useState('featured');
+  const isGanapati = collection.handle === GANAPATI_COLLECTION_HANDLE;
+  const displayTitle = isGanapati
+    ? GANAPATI_COLLECTION_TITLE
+    : collection.title;
 
   useEffect(() => {
     trackKhojActivity({
@@ -158,41 +167,121 @@ export default function Collection() {
     });
   }, [collection.id]);
 
-  const categories = useMemo(() => {
-    const found = new Set<string>();
-    products.forEach((product) => {
-      const categoryName = collectionCategory(product);
-      if (categoryName) found.add(categoryName);
-    });
-    return ['all', ...Array.from(found)];
-  }, [products]);
-
-  const visibleProducts = useMemo(() => {
-    const filtered =
-      category === 'all'
-        ? products
-        : products.filter((product) => collectionCategory(product) === category);
-    return sortProducts(filtered, sort);
-  }, [category, products, sort]);
-
   return (
     <main className="pilot-collection">
       <section className="pilot-collection-hero">
         <div>
-          <p className="pilot-kicker">Ganesh jewellery</p>
-          <h1>{GANAPATI_COLLECTION_TITLE}</h1>
-          <p>
-            Handpainted Ganapati jewellery for Ganesh Chaturthi, puja days,
-            festive gifting, and traditional outfits.
-          </p>
+          <p className="pilot-kicker">Handpainted jewellery</p>
+          <h1>{displayTitle}</h1>
+          {collection.description ? <p>{collection.description}</p> : null}
         </div>
         <div className="pilot-collection-stats">
-          <strong>{products.length}</strong>
-          <span>handmade pieces</span>
+          <strong>
+            {collection.products.nodes.length}
+            {collection.products.pageInfo.hasNextPage ? '+' : ''}
+          </strong>
+          <span>pieces to explore</span>
         </div>
       </section>
 
-      <section className="pilot-collection-toolbar" aria-label="Collection controls">
+      <Pagination<CollectionProduct> connection={collection.products as any}>
+        {({nodes, isLoading, PreviousLink, NextLink}) => (
+          <CollectionProducts
+            displayTitle={displayTitle}
+            isLoading={isLoading}
+            NextLink={NextLink}
+            PreviousLink={PreviousLink}
+            products={nodes}
+          />
+        )}
+      </Pagination>
+
+      {isGanapati ? (
+        <>
+          <section
+            className="pilot-collection-story"
+            aria-label="Ganapati collection story"
+          >
+            <div>
+              <p className="pilot-kicker">Handpainted with devotion</p>
+              <h2>Ganesh jewellery for auspicious beginnings</h2>
+            </div>
+            <p>
+              Each piece in this Ganapati collection brings Ganesha motifs into
+              lightweight handmade jewellery through folk-art inspired painting,
+              small-batch finishing, and colours made for Indian festive
+              dressing.
+            </p>
+          </section>
+
+          <section
+            className="pilot-collection-faq"
+            aria-label="Ganesh jewellery FAQs"
+          >
+            <h2>Frequently asked questions</h2>
+            {GANAPATI_FAQS.map((faq) => (
+              <details key={faq.question}>
+                <summary>{faq.question}</summary>
+                <p>{faq.answer}</p>
+              </details>
+            ))}
+          </section>
+        </>
+      ) : null}
+
+      <Analytics.CollectionView
+        data={{
+          collection: {
+            id: collection.id,
+            handle: collection.handle,
+          },
+        }}
+      />
+    </main>
+  );
+}
+
+function CollectionProducts({
+  displayTitle,
+  isLoading,
+  NextLink,
+  PreviousLink,
+  products,
+}: {
+  displayTitle: string;
+  isLoading: boolean;
+  NextLink: ComponentType<{children: ReactNode}>;
+  PreviousLink: ComponentType<{children: ReactNode}>;
+  products: CollectionProduct[];
+}) {
+  const [category, setCategory] = useState('all');
+  const [sort, setSort] = useState('featured');
+  const categories = useMemo(() => {
+    const found = new Set<string>();
+    products.forEach((product) => found.add(collectionCategory(product)));
+    return ['all', ...Array.from(found)];
+  }, [products]);
+  const visibleProducts = useMemo(() => {
+    const filtered =
+      category === 'all'
+        ? products
+        : products.filter(
+            (product) => collectionCategory(product) === category,
+          );
+    return sortProducts(filtered, sort);
+  }, [category, products, sort]);
+
+  return (
+    <>
+      <PreviousLink>
+        <span className="pilot-collection-load">
+          {isLoading ? 'Loading...' : 'Load previous products'}
+        </span>
+      </PreviousLink>
+      <section
+        className="pilot-collection-toolbar"
+        aria-label="Collection controls"
+      >
         <div className="pilot-collection-chips" aria-label="Filter by category">
           {categories.map((item) => (
             <button
@@ -207,7 +296,10 @@ export default function Collection() {
         </div>
         <label>
           <span>Sort</span>
-          <select onChange={(event) => setSort(event.target.value)} value={sort}>
+          <select
+            onChange={(event) => setSort(event.target.value)}
+            value={sort}
+          >
             <option value="featured">Featured</option>
             <option value="price-low">Price low to high</option>
             <option value="price-high">Price high to low</option>
@@ -215,10 +307,9 @@ export default function Collection() {
           </select>
         </label>
       </section>
-
       <section
         className="pilot-collection-grid"
-        aria-label={`${GANAPATI_COLLECTION_TITLE} products`}
+        aria-label={`${displayTitle} products`}
       >
         {visibleProducts.map((product, index) => (
           <CollectionProductCard
@@ -228,38 +319,12 @@ export default function Collection() {
           />
         ))}
       </section>
-
-      <section className="pilot-collection-story" aria-label="Ganapati collection story">
-        <div>
-          <p className="pilot-kicker">Handpainted with devotion</p>
-          <h2>Ganesh jewellery for auspicious beginnings</h2>
-        </div>
-        <p>
-          Each piece in this Ganapati collection brings Ganesha motifs into
-          lightweight handmade jewellery through folk-art inspired painting,
-          small-batch finishing, and colours made for Indian festive dressing.
-        </p>
-      </section>
-
-      <section className="pilot-collection-faq" aria-label="Ganesh jewellery FAQs">
-        <h2>Frequently asked questions</h2>
-        {GANAPATI_FAQS.map((faq) => (
-          <details key={faq.question}>
-            <summary>{faq.question}</summary>
-            <p>{faq.answer}</p>
-          </details>
-        ))}
-      </section>
-
-      <Analytics.CollectionView
-        data={{
-          collection: {
-            id: collection.id,
-            handle: collection.handle,
-          },
-        }}
-      />
-    </main>
+      <NextLink>
+        <span className="pilot-collection-load">
+          {isLoading ? 'Loading...' : 'Load more products'}
+        </span>
+      </NextLink>
+    </>
   );
 }
 
@@ -277,7 +342,7 @@ function CollectionProductCard({
     id: product.id,
     variantId: variant?.id || '',
     handle: product.handle,
-    url: `https://www.khoj.city/products/${product.handle}`,
+    url: `${SHOP_ORIGIN}/products/${product.handle}`,
     title: product.title,
     productType: product.productType,
     variantTitle: variant?.title || '',
@@ -349,7 +414,8 @@ function collectionCategory(product: CollectionProduct) {
   const source = `${product.productType} ${product.title}`.toLowerCase();
   if (source.includes('earring')) return 'earrings';
   if (source.includes('set')) return 'sets';
-  if (source.includes('necklace') || source.includes('choker')) return 'necklaces';
+  if (source.includes('necklace') || source.includes('choker'))
+    return 'necklaces';
   return product.productType?.toLowerCase() || 'jewellery';
 }
 
@@ -362,9 +428,13 @@ function categoryLabel(category: string) {
 function sortProducts(products: CollectionProduct[], sort: string) {
   const sorted = [...products];
   if (sort === 'price-low') {
-    sorted.sort((a, b) => moneyAmount(productPrice(a)) - moneyAmount(productPrice(b)));
+    sorted.sort(
+      (a, b) => moneyAmount(productPrice(a)) - moneyAmount(productPrice(b)),
+    );
   } else if (sort === 'price-high') {
-    sorted.sort((a, b) => moneyAmount(productPrice(b)) - moneyAmount(productPrice(a)));
+    sorted.sort(
+      (a, b) => moneyAmount(productPrice(b)) - moneyAmount(productPrice(a)),
+    );
   } else if (sort === 'discount') {
     sorted.sort(
       (a, b) =>
@@ -376,7 +446,10 @@ function sortProducts(products: CollectionProduct[], sort: string) {
 }
 
 function productPrice(product: CollectionProduct) {
-  return product.selectedOrFirstAvailableVariant?.price || product.priceRange.minVariantPrice;
+  return (
+    product.selectedOrFirstAvailableVariant?.price ||
+    product.priceRange.minVariantPrice
+  );
 }
 
 function moneyAmount(money?: MoneyValue | null) {
@@ -384,7 +457,9 @@ function moneyAmount(money?: MoneyValue | null) {
   return Number.isFinite(amount) ? amount : 0;
 }
 
-function getSavings(variant?: CollectionProduct['selectedOrFirstAvailableVariant']) {
+function getSavings(
+  variant?: CollectionProduct['selectedOrFirstAvailableVariant'],
+) {
   const price = moneyAmount(variant?.price);
   const compareAt = moneyAmount(variant?.compareAtPrice);
   if (!price || !compareAt || compareAt <= price) return null;
@@ -479,20 +554,35 @@ const COLLECTION_QUERY = `#graphql
     $handle: String!
     $country: CountryCode
     $language: LanguageCode
-    $first: Int!
+    $first: Int
+    $last: Int
+    $startCursor: String
+    $endCursor: String
   ) @inContext(country: $country, language: $language) {
     collection(handle: $handle) {
       id
       handle
       title
       description
+      image {
+        url
+        altText
+        width
+        height
+      }
       seo {
         title
         description
       }
-      products(first: $first) {
+      products(first: $first, last: $last, before: $startCursor, after: $endCursor) {
         nodes {
           ...CollectionProduct
+        }
+        pageInfo {
+          hasNextPage
+          hasPreviousPage
+          startCursor
+          endCursor
         }
       }
     }

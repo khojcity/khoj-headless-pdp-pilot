@@ -552,7 +552,7 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-checkout-notes span::before {
   color: #0f7c43;
-  content: "✓";
+  content: '✓';
   font-weight: 800;
   margin-right: 5px;
 }
@@ -957,11 +957,144 @@ button.reset:hover:not(:has(> *)) {
   max-width: 1180px;
 }
 
+.pilot-collection-load {
+  background: #fff;
+  border: 1px solid #d9d5ca;
+  color: #142016;
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 800;
+  margin: 18px auto;
+  max-width: 260px;
+  padding: 12px 18px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.pilot-collection > a {
+  text-decoration: none;
+}
+
 .pilot-collection-card {
   background: #fff;
   border: 1px solid #e1ddd2;
   display: grid;
   min-width: 0;
+}
+
+/*
+* --------------------------------------------------
+* Khoj collection directory
+* --------------------------------------------------
+*/
+.pilot-collection-directory {
+  background: #fbfbf7;
+  min-height: 70vh;
+  padding: 28px 14px 80px;
+}
+
+.pilot-collection-directory > div,
+.pilot-collection-directory-header {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1180px;
+}
+
+.pilot-collection-directory-header {
+  border-bottom: 1px solid #e4e0d6;
+  margin-bottom: 18px;
+  padding-bottom: 20px;
+}
+
+.pilot-collection-directory-header h1 {
+  font-size: clamp(2rem, 4vw, 4rem);
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 0;
+}
+
+.pilot-collection-directory-header > p:last-child {
+  color: #556252;
+  line-height: 1.5;
+  margin: 12px 0 0;
+  max-width: 680px;
+}
+
+.pilot-collection-directory-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pilot-collection-directory-card {
+  background: #fff;
+  border: 1px solid #e1ddd2;
+  color: #142016;
+  display: grid;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.pilot-collection-directory-media {
+  align-items: center;
+  aspect-ratio: 1 / 1;
+  background: #e9eee7;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pilot-collection-directory-media img {
+  border-radius: 0;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.pilot-collection-directory-media > span {
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 18px;
+  text-align: center;
+}
+
+.pilot-collection-directory-card > div:last-child {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.pilot-collection-directory-card h2 {
+  font-size: 1.05rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.pilot-collection-directory-card p {
+  color: #596858;
+  display: -webkit-box;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.pilot-collection-directory-card > div:last-child > span {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+@media (min-width: 760px) {
+  .pilot-collection-directory {
+    padding: 38px 24px 80px;
+  }
+
+  .pilot-collection-directory-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .pilot-collection-card-media {
@@ -2071,7 +2204,7 @@ button.reset:hover:not(:has(> *)) {
 .pilot-checkout-progress::after {
   animation: pilot-checkout-progress 900ms ease-in-out infinite;
   background: #0d7236;
-  content: "";
+  content: '';
   height: 100%;
   left: 0;
   position: absolute;
@@ -2123,7 +2256,7 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-cart-trust span::before {
   color: #0f7c43;
-  content: "✓";
+  content: '✓';
   font-weight: 800;
   margin-right: 6px;
 }
