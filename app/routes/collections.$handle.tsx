@@ -173,7 +173,6 @@ export default function Collection() {
         <div>
           <p className="pilot-kicker">Handpainted jewellery</p>
           <h1>{displayTitle}</h1>
-          {collection.description ? <p>{collection.description}</p> : null}
         </div>
         <div className="pilot-collection-stats">
           <strong>

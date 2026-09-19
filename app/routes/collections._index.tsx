@@ -101,7 +101,6 @@ function CollectionItem({
       </div>
       <div>
         <h2>{collection.title}</h2>
-        {collection.description ? <p>{collection.description}</p> : null}
         <span>Shop collection</span>
       </div>
     </Link>
@@ -113,7 +112,6 @@ const COLLECTIONS_QUERY = `#graphql
     id
     title
     handle
-    description
     image {
       id
       url
