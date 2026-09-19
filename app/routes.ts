@@ -11,6 +11,7 @@ export default hydrogenRoutes([
   route('collections/:handle', 'routes/collections.$handle.tsx'),
   route('cart', 'routes/cart.tsx'),
   route('cart/bridge', 'routes/cart.bridge.tsx'),
+  route('favicon.ico', 'routes/[favicon.ico].tsx'),
   route('robots.txt', 'routes/[robots.txt].tsx'),
   route('sitemap.xml', 'routes/[sitemap.xml].tsx'),
   route('*', 'routes/$.tsx'),

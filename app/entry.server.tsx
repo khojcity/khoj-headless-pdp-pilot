@@ -39,6 +39,7 @@ export default async function handleRequest(
       'https://*.google-analytics.com',
       'https://www.google.com',
       'https://www.googleadservices.com',
+      'https://ad.doubleclick.net',
       'https://googleads.g.doubleclick.net',
     ],
     frameSrc: ['https://www.facebook.com', 'https://*.facebook.com'],
@@ -53,6 +54,7 @@ export default async function handleRequest(
       'https://*.google-analytics.com',
       'https://www.google.com',
       'https://www.googleadservices.com',
+      'https://ad.doubleclick.net',
       'https://googleads.g.doubleclick.net',
     ],
   });
