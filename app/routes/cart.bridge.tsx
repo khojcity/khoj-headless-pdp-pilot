@@ -95,6 +95,7 @@ async function importThemeCart({
 
   const sourceCart = parseBridgePayload(payload);
   const lines = ajaxCartToCartLines(sourceCart);
+  const bridgeAttributes = getBridgeCartAttributes(attributionParams);
 
   if (!lines.length) {
     return redirect(cartRedirectUrl('empty', attributionParams));
@@ -108,20 +109,25 @@ async function importThemeCart({
           lines,
           discountCodes,
           note: sourceCart.note || undefined,
-          attributes: [
-            {
-              key: 'cart_bridge_source',
-              value: 'www.khoj.city',
-            },
-          ],
+          attributes: bridgeAttributes,
         });
 
-  const cartResult = result.cart;
+  let cartResult = result.cart;
 
   if (result.errors?.length || !cartResult) {
     throw new Response('Unable to import cart. Please try again.', {
       status: 422,
     });
+  }
+
+  if (existingCart?.id) {
+    const attributeResult = await context.cart.updateAttributes(bridgeAttributes);
+    if (attributeResult.errors?.length || !attributeResult.cart) {
+      throw new Response('Unable to save cart attribution. Please try again.', {
+        status: 422,
+      });
+    }
+    cartResult = attributeResult.cart;
   }
 
   const headers = context.cart.setCartId(cartResult.id);
@@ -135,6 +141,19 @@ function getAttributionParams(input: FormData | URLSearchParams) {
     if (value) params.set(name, value);
   }
   return params;
+}
+
+function getBridgeCartAttributes(attributionParams: URLSearchParams) {
+  return [
+    {
+      key: 'cart_bridge_source',
+      value: 'www.khoj.city',
+    },
+    ...Array.from(attributionParams, ([name, value]) => ({
+      key: `khoj_attribution_${name}`,
+      value: value.slice(0, 255),
+    })),
+  ];
 }
 
 function cartRedirectUrl(

@@ -180,6 +180,7 @@ export default function App() {
       cart={data.cart}
       shop={data.shop}
       consent={data.consent}
+      cookieDomain="khoj.city"
     >
       <PilotShell shopName={data.shopName || 'KHOJ.CITY'}>
         <Outlet />
