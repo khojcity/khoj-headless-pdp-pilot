@@ -14,6 +14,18 @@ type AjaxCartItem = {
 };
 
 const MAX_BRIDGE_LINES = 50;
+const ATTRIBUTION_PARAM_NAMES = [
+  'utm_source',
+  'utm_medium',
+  'utm_campaign',
+  'utm_id',
+  'utm_term',
+  'utm_content',
+  'fbclid',
+  'gclid',
+  'gbraid',
+  'wbraid',
+] as const;
 
 export async function action({request, context}: Route.ActionArgs) {
   const formData = await request.formData();
@@ -21,6 +33,7 @@ export async function action({request, context}: Route.ActionArgs) {
   const source = String(formData.get('source') || '');
 
   return importThemeCart({
+    attributionParams: getAttributionParams(formData),
     context,
     discountCodes: getDiscountCodes(formData),
     mode: getBridgeMode(formData),
@@ -32,6 +45,7 @@ export async function action({request, context}: Route.ActionArgs) {
 export function loader({request, context}: Route.LoaderArgs) {
   const url = new URL(request.url);
   return importThemeCart({
+    attributionParams: getAttributionParams(url.searchParams),
     context,
     discountCodes: getDiscountCodes(url.searchParams),
     mode: getBridgeMode(url.searchParams),
@@ -61,12 +75,14 @@ function parseBridgePayload(payload: string): AjaxCart {
 }
 
 async function importThemeCart({
+  attributionParams,
   context,
   discountCodes,
   mode,
   payload,
   source,
 }: {
+  attributionParams: URLSearchParams;
   context: Route.ActionArgs['context'];
   discountCodes: string[];
   mode: BridgeMode;
@@ -74,14 +90,14 @@ async function importThemeCart({
   source: string;
 }) {
   if (!payload || source !== 'khoj-theme-cart') {
-    return redirect('/cart?bridge=invalid');
+    return redirect(cartRedirectUrl('invalid', attributionParams));
   }
 
   const sourceCart = parseBridgePayload(payload);
   const lines = ajaxCartToCartLines(sourceCart);
 
   if (!lines.length) {
-    return redirect('/cart?bridge=empty');
+    return redirect(cartRedirectUrl('empty', attributionParams));
   }
 
   const existingCart = mode === 'append' ? await context.cart.get() : null;
@@ -109,7 +125,28 @@ async function importThemeCart({
   }
 
   const headers = context.cart.setCartId(cartResult.id);
-  return redirect('/cart?bridge=imported', {headers});
+  return redirect(cartRedirectUrl('imported', attributionParams), {headers});
+}
+
+function getAttributionParams(input: FormData | URLSearchParams) {
+  const params = new URLSearchParams();
+  for (const name of ATTRIBUTION_PARAM_NAMES) {
+    const value = String(input.get(name) || '').trim().slice(0, 512);
+    if (value) params.set(name, value);
+  }
+  return params;
+}
+
+function cartRedirectUrl(
+  bridge: 'invalid' | 'empty' | 'imported',
+  attributionParams: URLSearchParams,
+) {
+  const params = new URLSearchParams();
+  params.set('bridge', bridge);
+  for (const [name, value] of attributionParams) {
+    params.set(name, value);
+  }
+  return `/cart?${params.toString()}`;
 }
 
 function ajaxCartToCartLines(cart: AjaxCart) {
