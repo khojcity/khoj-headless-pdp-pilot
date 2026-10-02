@@ -2506,6 +2506,45 @@ button.reset:hover:not(:has(> *)) {
   margin: 0;
 }
 
+.pilot-payment-step {
+  display: grid;
+  gap: 14px;
+}
+
+.pilot-payment-step h2 {
+  margin-bottom: 0;
+}
+
+.pilot-payment-address-summary {
+  background: #f7f8f4;
+  border-left: 3px solid #0d7236;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.pilot-payment-address-summary span {
+  color: #596858;
+  font-size: 0.8rem;
+}
+
+.pilot-payment-step .pilot-checkout-preference {
+  margin: 0;
+}
+
+.pilot-payment-total {
+  align-items: center;
+  border-bottom: 1px solid #e1ddd2;
+  border-top: 1px solid #e1ddd2;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.pilot-payment-total strong {
+  font-size: 1.1rem;
+}
+
 .pilot-address-email-confirmed {
   background: #f1f7f1;
   border-left: 3px solid #0d7236;

@@ -32,6 +32,19 @@ type TrackProduct = {
   quantity?: number;
 };
 
+export type TrackCustomer = {
+  id?: string;
+  shopify_customer_id?: string;
+  email?: string;
+  phone?: string;
+  firstName?: string;
+  lastName?: string;
+  city?: string;
+  province?: string;
+  country?: string;
+  zip?: string;
+};
+
 export type TrackEvent = {
   eventType: string;
   eventId: string;
@@ -39,6 +52,7 @@ export type TrackEvent = {
   items?: TrackProduct[];
   totalPrice?: Money | null;
   checkoutUrl?: string;
+  customer?: TrackCustomer;
 };
 
 type MetaPixel = {
@@ -53,10 +67,9 @@ type MetaPixel = {
 type GoogleTag = (...args: unknown[]) => void;
 
 function googleDestinationIds() {
-  return [
-    window.ENV?.GA4_MEASUREMENT_ID,
-    window.ENV?.GOOGLE_ADS_ID,
-  ].filter((id): id is string => Boolean(id));
+  return [window.ENV?.GA4_MEASUREMENT_ID, window.ENV?.GOOGLE_ADS_ID].filter(
+    (id): id is string => Boolean(id),
+  );
 }
 
 function randomId() {
@@ -178,8 +191,8 @@ function ensureGoogleTag() {
     __khojGoogleTagIds?: string;
   };
   w.khojGoogleDataLayer ||= [];
-  w.khojGtag ||= function () {
-    w.khojGoogleDataLayer?.push(arguments);
+  w.khojGtag ||= function (...args: unknown[]) {
+    w.khojGoogleDataLayer?.push(args);
   };
 
   const configuredIds = uniqueMeasurementIds.join(',');
@@ -306,8 +319,11 @@ function trackMetaPixelActivity(event: TrackEvent) {
     return;
   }
 
-  // Shopify checkout already fires InitiateCheckout. Keep Hydrogen Meta events
-  // limited to the pre-checkout storefront funnel to avoid duplicate signals.
+  if (event.eventType === 'checkout_started') {
+    fbq('track', 'InitiateCheckout', metaProductParams(event), {
+      eventID: event.eventId,
+    });
+  }
 }
 
 function trackGoogleActivity(event: TrackEvent) {
@@ -337,6 +353,15 @@ function trackGoogleActivity(event: TrackEvent) {
 
   if (event.eventType === 'product_added_to_cart') {
     gtag('event', 'add_to_cart', {
+      ...googleEcommerceParams(event),
+      send_to: googleDestinationIds(),
+      transport_type: 'beacon',
+    });
+    return;
+  }
+
+  if (event.eventType === 'checkout_started') {
+    gtag('event', 'begin_checkout', {
       ...googleEcommerceParams(event),
       send_to: googleDestinationIds(),
       transport_type: 'beacon',
@@ -379,10 +404,36 @@ export function trackKhojActivity(event: TrackEvent) {
     visitor_customer_id: visitorCustomerId,
     shopify_customer_id: visitorCustomerId,
     external_id: visitorCustomerId,
-    customer: visitorCustomerId
+    customer: cleanParams({
+      id: event.customer?.id || visitorCustomerId,
+      shopify_customer_id:
+        event.customer?.shopify_customer_id || visitorCustomerId,
+      email: event.customer?.email,
+      phone: event.customer?.phone,
+      firstName: event.customer?.firstName,
+      lastName: event.customer?.lastName,
+      city: event.customer?.city,
+      province: event.customer?.province,
+      country: event.customer?.country,
+      zip: event.customer?.zip,
+    }),
+    buyerIdentity: cleanParams({
+      email: event.customer?.email,
+      phone: event.customer?.phone,
+    }),
+    checkout: event.customer
       ? {
-          id: visitorCustomerId,
-          shopify_customer_id: visitorCustomerId,
+          email: event.customer.email,
+          phone: event.customer.phone,
+          shippingAddress: cleanParams({
+            firstName: event.customer.firstName,
+            lastName: event.customer.lastName,
+            city: event.customer.city,
+            province: event.customer.province,
+            country: event.customer.country,
+            zip: event.customer.zip,
+            phone: event.customer.phone,
+          }),
         }
       : undefined,
     product: event.product,
@@ -412,7 +463,7 @@ export function KhojPageTracking({product}: {product: TrackProduct}) {
       eventId: khojTrackingEventId('viewcontent'),
       product,
     });
-  }, [product.id, product.variantId]);
+  }, [product]);
 
   return null;
 }

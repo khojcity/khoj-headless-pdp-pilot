@@ -8,10 +8,15 @@ import {
   useFetcher,
   type HeadersFunction,
 } from 'react-router';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef, useState, type FormEvent} from 'react';
 import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm, Image, Money} from '@shopify/hydrogen';
+import {
+  khojTrackingEventId,
+  trackKhojActivity,
+  type TrackCustomer,
+} from '~/components/KhojTracking';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: `Cart | KHOJ.CITY`}];
@@ -229,26 +234,20 @@ export async function loader({context, request}: Route.LoaderArgs) {
     new URL(request.url).searchParams.get('address') === 'required';
   return {
     cart: cartResult,
-    knownCheckoutReady:
-      !forceAddressFlow && isCompleteKnownCheckoutProfile(knownProfile),
+    knownProfile: forceAddressFlow ? null : knownProfile,
   };
 }
 
 export default function Cart() {
-  const {cart, knownCheckoutReady} = useLoaderData<typeof loader>();
+  const {cart, knownProfile} = useLoaderData<typeof loader>();
   const lines = cart?.lines?.nodes || [];
   const hasItems = lines.length > 0;
   const totalQuantity = cart?.totalQuantity || 0;
   const summary = getCartSummary(cart, lines);
-  const savedCheckoutPreference = getSavedCheckoutPreference(cart);
-  const [checkoutPreference, setCheckoutPreference] = useState(
-    savedCheckoutPreference || '',
-  );
-  const codFee = checkoutPreference === 'cod' ? 60 : 0;
-  const displayTotal = summary.subtotal + codFee;
   const [addressFlowOpen, setAddressFlowOpen] = useState(false);
   return (
     <main className="pilot-cart">
+      <CartPageTracking cart={cart} knownProfile={knownProfile} lines={lines} />
       <div className="pilot-cart-header">
         <div>
           <p className="pilot-kicker">Review your order</p>
@@ -283,11 +282,6 @@ export default function Cart() {
               ))}
             </div>
 
-            <CheckoutPreferenceSelector
-              value={checkoutPreference}
-              onChange={setCheckoutPreference}
-            />
-
             <aside className="pilot-cart-summary">
               <h2>Price breakdown</h2>
               <dl>
@@ -303,11 +297,11 @@ export default function Cart() {
                 </div>
                 <div>
                   <dt>Shipping</dt>
-                  <dd>{checkoutPreference === 'cod' ? 'COD + ₹60' : 'Free'}</dd>
+                  <dd>Selected after delivery details</dd>
                 </div>
                 <div className="pilot-cart-total-row">
                   <dt>Total</dt>
-                  <dd>{formatRupees(displayTotal)}</dd>
+                  <dd>{formatRupees(summary.subtotal)}</dd>
                 </div>
               </dl>
 
@@ -324,8 +318,6 @@ export default function Cart() {
 
               {cart?.checkoutUrl ? (
                 <CheckoutStartButton
-                  checkoutPreference={checkoutPreference}
-                  knownCheckoutReady={knownCheckoutReady}
                   label="Proceed to checkout"
                   onClick={() => setAddressFlowOpen(true)}
                 />
@@ -343,14 +335,10 @@ export default function Cart() {
             <div className="pilot-cart-sticky">
               <div>
                 <span>Total</span>
-                <strong>{formatRupees(displayTotal)}</strong>
-                {!checkoutPreference ? (
-                  <small>Select shipping type</small>
-                ) : null}
+                <strong>{formatRupees(summary.subtotal)}</strong>
+                <small>Delivery option selected next</small>
               </div>
               <CheckoutStartButton
-                checkoutPreference={checkoutPreference}
-                knownCheckoutReady={knownCheckoutReady}
                 label="Proceed to checkout"
                 onClick={() => setAddressFlowOpen(true)}
               />
@@ -358,10 +346,11 @@ export default function Cart() {
           ) : null}
           {addressFlowOpen ? (
             <AddressCheckoutFlow
-              checkoutPreference={checkoutPreference}
+              baseTotal={summary.subtotal}
               itemCount={totalQuantity}
+              knownProfile={knownProfile}
+              lines={lines}
               onClose={() => setAddressFlowOpen(false)}
-              total={formatRupees(displayTotal)}
             />
           ) : null}
         </>
@@ -378,26 +367,72 @@ function CartInfographic({alt, src}: {alt: string; src: string}) {
   );
 }
 
+function cartTrackingItems(lines: any[]) {
+  return lines.map((line) => ({
+    id: line.merchandise?.product?.id || line.merchandise?.id,
+    variantId: line.merchandise?.id,
+    handle: line.merchandise?.product?.handle,
+    title: line.merchandise?.product?.title || line.merchandise?.title || '',
+    productType: line.merchandise?.product?.productType,
+    variantTitle: line.merchandise?.title,
+    vendor: line.merchandise?.product?.vendor,
+    price: line.cost?.amountPerQuantity,
+    quantity: line.quantity,
+  }));
+}
+
+function knownProfileTrackingCustomer(
+  profile?: KnownCheckoutProfile | null,
+): TrackCustomer | undefined {
+  if (!profile) return undefined;
+  return {
+    email: profile.email,
+    phone: profile.phone,
+    firstName: profile.address?.firstName,
+    lastName: profile.address?.lastName,
+    city: profile.address?.city,
+    province: profile.address?.province || profile.address?.provinceCode,
+    country: profile.address?.country || profile.address?.countryCode || 'IN',
+    zip: profile.address?.zip,
+  };
+}
+
+function CartPageTracking({
+  cart,
+  knownProfile,
+  lines,
+}: {
+  cart: any;
+  knownProfile?: KnownCheckoutProfile | null;
+  lines: any[];
+}): null {
+  const trackedPage = useRef('');
+  useEffect(() => {
+    const trackingKey = `${cart?.id || 'empty'}|${knownProfile?.customer_ref || 'anonymous'}`;
+    if (trackedPage.current === trackingKey) return;
+    trackedPage.current = trackingKey;
+    trackKhojActivity({
+      eventType: 'page_viewed',
+      eventId: khojTrackingEventId('cart-page'),
+      items: cartTrackingItems(lines),
+      totalPrice: cart?.cost?.subtotalAmount,
+      checkoutUrl: cart?.checkoutUrl,
+      customer: knownProfileTrackingCustomer(knownProfile),
+    });
+  }, [cart, knownProfile, lines]);
+  return null;
+}
+
 function CheckoutStartButton({
-  checkoutPreference,
-  knownCheckoutReady,
   label,
   onClick,
 }: {
-  checkoutPreference: string;
-  knownCheckoutReady: boolean;
   label: string;
   onClick: () => void;
 }) {
-  if (knownCheckoutReady) {
-    return (
-      <CheckoutForm checkoutPreference={checkoutPreference} label={label} />
-    );
-  }
   return (
     <button
       className="pilot-button pilot-button-primary"
-      disabled={!checkoutPreference}
       onClick={onClick}
       type="button"
     >
@@ -428,26 +463,41 @@ function isUsableCheckoutEmail(email?: string) {
 }
 
 function AddressCheckoutFlow({
-  checkoutPreference,
+  baseTotal,
   itemCount,
+  knownProfile,
+  lines,
   onClose,
-  total,
 }: {
-  checkoutPreference: string;
+  baseTotal: number;
   itemCount: number;
+  knownProfile?: KnownCheckoutProfile | null;
+  lines: any[];
   onClose: () => void;
-  total: string;
 }) {
   const fetcher = useFetcher<any>();
-  const [step, setStep] = useState<'phone' | 'otp' | 'address' | 'manual'>(
-    'phone',
+  const knownAddress = knownProfileToDeliveryAddress(knownProfile);
+  const [step, setStep] = useState<
+    'phone' | 'otp' | 'address' | 'manual' | 'payment'
+  >(
+    knownAddress
+      ? isUsableCheckoutEmail(knownAddress.email)
+        ? 'payment'
+        : 'address'
+      : 'phone',
   );
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(knownAddress?.phone || '');
   const [otp, setOtp] = useState('');
   const [loginToken, setLoginToken] = useState('');
-  const [address, setAddress] = useState<DeliveryAddress | null>(null);
+  const [address, setAddress] = useState<DeliveryAddress | null>(knownAddress);
+  const [checkoutIdentity, setCheckoutIdentity] =
+    useState<DeliveryAddress | null>(knownAddress);
+  const [checkoutPreference, setCheckoutPreference] = useState<
+    CheckoutPreference | ''
+  >('');
   const [resendSeconds, setResendSeconds] = useState(30);
   const submittedOtp = useRef('');
+  const trackedIdentity = useRef('');
   useEffect(() => {
     if (fetcher.data?.loginToken) {
       setLoginToken(fetcher.data.loginToken);
@@ -455,12 +505,30 @@ function AddressCheckoutFlow({
       setResendSeconds(30);
     }
     if (fetcher.data?.addresses) {
-      setAddress(fetcher.data.addresses[0] || null);
+      setAddress(
+        fetcher.data.addresses[0] || {
+          phone: fetcher.data.phone || '',
+          email: fetcher.data.resolvedEmail || '',
+        },
+      );
       setStep(fetcher.data.addresses.length ? 'address' : 'manual');
     }
   }, [fetcher.data]);
   const busy = fetcher.state !== 'idle';
   const error = fetcher.data?.error;
+  useEffect(() => {
+    if (step !== 'payment' || !checkoutIdentity) return;
+    const identityKey = `${checkoutIdentity.phone}|${checkoutIdentity.email}`;
+    if (trackedIdentity.current === identityKey) return;
+    trackedIdentity.current = identityKey;
+    trackKhojActivity({
+      eventType: 'checkout_started',
+      eventId: khojTrackingEventId('initiatecheckout'),
+      items: cartTrackingItems(lines),
+      totalPrice: {amount: String(baseTotal), currencyCode: 'INR'},
+      customer: deliveryAddressTrackingCustomer(checkoutIdentity),
+    });
+  }, [baseTotal, checkoutIdentity, lines, step]);
   useEffect(() => {
     if (step !== 'otp' || resendSeconds <= 0) return;
     const timer = window.setTimeout(
@@ -480,7 +548,7 @@ function AddressCheckoutFlow({
       return;
     }
     submittedOtp.current = otp;
-    fetcher.submit(
+    void fetcher.submit(
       {_intent: 'shiprocketAddressVerify', loginToken, phone, otp},
       {method: 'post'},
     );
@@ -497,6 +565,10 @@ function AddressCheckoutFlow({
       setStep('address');
       return;
     }
+    if (step === 'payment') {
+      setStep(address ? 'address' : 'manual');
+      return;
+    }
     setStep('phone');
   };
   const resendOtp = () => {
@@ -504,7 +576,7 @@ function AddressCheckoutFlow({
     setOtp('');
     submittedOtp.current = '';
     setResendSeconds(30);
-    fetcher.submit(
+    void fetcher.submit(
       {_intent: 'shiprocketAddressInitiate', phone, consent: 'on'},
       {method: 'post'},
     );
@@ -533,7 +605,11 @@ function AddressCheckoutFlow({
             <span>
               Order summary ({itemCount} {itemCount === 1 ? 'item' : 'items'})
             </span>
-            <strong>{total}</strong>
+            <strong>
+              {formatRupees(
+                baseTotal + (checkoutPreference === 'cod' ? 60 : 0),
+              )}
+            </strong>
           </div>
           {error ? <p className="pilot-address-error">{error}</p> : null}
           {step === 'phone' ? (
@@ -666,16 +742,31 @@ function AddressCheckoutFlow({
           {step === 'address' && address ? (
             <CheckoutIdentityForm
               address={address}
-              checkoutPreference={checkoutPreference}
               onManual={() => setStep('manual')}
+              onContinue={(identity) => {
+                setCheckoutIdentity(identity);
+                setStep('payment');
+              }}
             />
           ) : null}
           {step === 'manual' ? (
             <CheckoutIdentityForm
-              address={{phone}}
-              checkoutPreference={checkoutPreference}
+              address={address || {phone}}
               manual
-              onManual={() => setStep('phone')}
+              onManual={() => setStep(address ? 'address' : 'phone')}
+              onContinue={(identity) => {
+                setAddress(identity);
+                setCheckoutIdentity(identity);
+                setStep('payment');
+              }}
+            />
+          ) : null}
+          {step === 'payment' && checkoutIdentity ? (
+            <CheckoutPaymentStep
+              address={checkoutIdentity}
+              baseTotal={baseTotal}
+              checkoutPreference={checkoutPreference}
+              onChange={setCheckoutPreference}
             />
           ) : null}
           <footer className="pilot-address-footer">
@@ -699,26 +790,36 @@ function AddressCheckoutFlow({
 
 function CheckoutIdentityForm({
   address,
-  checkoutPreference,
   manual = false,
   onManual,
+  onContinue,
 }: {
   address: DeliveryAddress;
-  checkoutPreference: string;
   manual?: boolean;
   onManual: () => void;
+  onContinue: (identity: DeliveryAddress) => void;
 }) {
   const hasUsableEmail = isUsableCheckoutEmail(address.email);
+  const continueWithAddress = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const value = (name: string) => String(formData.get(name) || '').trim();
+    onContinue({
+      first_name: value('firstName'),
+      last_name: value('lastName'),
+      line1: value('address1'),
+      line2: value('address2'),
+      city: value('city'),
+      state: value('province'),
+      pincode: value('zip'),
+      country: 'India',
+      phone: value('phone'),
+      email: value('email'),
+    });
+  };
   if (!manual) {
     return (
-      <Form method="post" className="pilot-address-form">
-        <input name="_intent" type="hidden" value="prepareCheckout" />
-        <input name="addressFlow" type="hidden" value="completed" />
-        <input
-          name="checkoutPreference"
-          type="hidden"
-          value={checkoutPreference}
-        />
+      <form className="pilot-address-form" onSubmit={continueWithAddress}>
         <input
           name="firstName"
           type="hidden"
@@ -782,32 +883,39 @@ function CheckoutIdentityForm({
           </div>
         )}
         <button className="pilot-button pilot-button-primary" type="submit">
-          Continue to secure checkout
+          Continue to payment options
         </button>
-      </Form>
+      </form>
     );
   }
   return (
-    <Form method="post" className="pilot-address-form">
-      <input name="_intent" type="hidden" value="prepareCheckout" />
-      <input name="addressFlow" type="hidden" value="completed" />
-      <input
-        name="checkoutPreference"
-        type="hidden"
-        value={checkoutPreference}
-      />
+    <form className="pilot-address-form" onSubmit={continueWithAddress}>
       <p className="pilot-kicker">
         {manual ? 'Manual delivery address' : 'Saved address found'}
       </p>
       <h2>
         {manual ? 'Where should we deliver?' : 'Confirm delivery details'}
       </h2>
-      <p>Email is required for order confirmation and delivery updates.</p>
+      <p>
+        {hasUsableEmail
+          ? `Order updates will be sent to ${address.email}.`
+          : 'Email is required for order confirmation and delivery updates.'}
+      </p>
       <div className="pilot-address-grid">
-        <label className="wide">
-          Email address
-          <input name="email" type="email" required />
-        </label>
+        {hasUsableEmail ? (
+          <input name="email" type="hidden" value={address.email} />
+        ) : (
+          <label className="wide">
+            Email address
+            <input
+              autoComplete="email"
+              inputMode="email"
+              name="email"
+              required
+              type="email"
+            />
+          </label>
+        )}
         <label>
           First name
           <input
@@ -855,7 +963,7 @@ function CheckoutIdentityForm({
         </label>
       </div>
       <button className="pilot-button pilot-button-primary" type="submit">
-        Continue to secure checkout
+        Continue to payment options
       </button>
       <button
         className="pilot-address-secondary"
@@ -864,15 +972,113 @@ function CheckoutIdentityForm({
       >
         {manual ? 'Use saved address' : 'Enter a different address'}
       </button>
-    </Form>
+    </form>
+  );
+}
+
+function knownProfileToDeliveryAddress(
+  profile?: KnownCheckoutProfile | null,
+): DeliveryAddress | null {
+  if (!profile || !hasCompleteKnownCheckoutAddress(profile)) return null;
+  return {
+    first_name: profile.address?.firstName,
+    last_name: profile.address?.lastName,
+    line1: profile.address?.address1,
+    line2: profile.address?.address2,
+    city: profile.address?.city,
+    state: profile.address?.province || profile.address?.provinceCode,
+    pincode: profile.address?.zip,
+    country: profile.address?.country || 'India',
+    phone: profile.address?.phone || profile.phone,
+    email: profile.email,
+  };
+}
+
+function deliveryAddressTrackingCustomer(
+  address: DeliveryAddress,
+): TrackCustomer {
+  return {
+    email: address.email,
+    phone: address.phone,
+    firstName: address.first_name,
+    lastName: address.last_name,
+    city: address.city,
+    province: address.state,
+    country: address.country || 'IN',
+    zip: address.pincode,
+  };
+}
+
+function CheckoutIdentityInputs({address}: {address: DeliveryAddress}) {
+  return (
+    <>
+      <input name="addressFlow" type="hidden" value="completed" />
+      <input name="email" type="hidden" value={address.email || ''} />
+      <input name="firstName" type="hidden" value={address.first_name || ''} />
+      <input name="lastName" type="hidden" value={address.last_name || ''} />
+      <input name="address1" type="hidden" value={address.line1 || ''} />
+      <input name="address2" type="hidden" value={address.line2 || ''} />
+      <input name="zip" type="hidden" value={address.pincode || ''} />
+      <input name="city" type="hidden" value={address.city || ''} />
+      <input name="province" type="hidden" value={address.state || ''} />
+      <input name="phone" type="hidden" value={address.phone || ''} />
+    </>
+  );
+}
+
+function CheckoutPaymentStep({
+  address,
+  baseTotal,
+  checkoutPreference,
+  onChange,
+}: {
+  address: DeliveryAddress;
+  baseTotal: number;
+  checkoutPreference: CheckoutPreference | '';
+  onChange: (value: CheckoutPreference | '') => void;
+}) {
+  return (
+    <div className="pilot-payment-step">
+      <p className="pilot-kicker">Delivery details confirmed</p>
+      <h2>Choose payment method</h2>
+      <section className="pilot-payment-address-summary">
+        <strong>
+          {[address.first_name, address.last_name].filter(Boolean).join(' ')}
+        </strong>
+        <span>
+          {[address.city, address.state, address.pincode]
+            .filter(Boolean)
+            .join(', ')}
+        </span>
+      </section>
+      <CheckoutPreferenceSelector
+        value={checkoutPreference}
+        onChange={(value) =>
+          onChange(value === 'cod' || value === 'prepaid' ? value : '')
+        }
+      />
+      <div className="pilot-payment-total">
+        <span>Total</span>
+        <strong>
+          {formatRupees(baseTotal + (checkoutPreference === 'cod' ? 60 : 0))}
+        </strong>
+      </div>
+      <CheckoutForm
+        address={address}
+        checkoutPreference={checkoutPreference}
+        label="Continue to secure checkout"
+      />
+    </div>
   );
 }
 
 function CheckoutForm({
+  address,
   checkoutPreference,
   label,
 }: {
-  checkoutPreference: string;
+  address: DeliveryAddress;
+  checkoutPreference: CheckoutPreference | '';
   label: string;
 }) {
   const navigation = useNavigation();
@@ -908,6 +1114,7 @@ function CheckoutForm({
       onSubmit={() => setHasSubmittedCheckout(true)}
     >
       <input type="hidden" name="_intent" value="prepareCheckout" />
+      <CheckoutIdentityInputs address={address} />
       <input
         type="hidden"
         name="checkoutPreference"
@@ -944,7 +1151,7 @@ function CheckoutPreferenceSelector({
       }
     >
       <legend>
-        Choose shipping type
+        Choose payment type
         {isPending ? <span>Select one to continue</span> : null}
       </legend>
       <label
@@ -996,6 +1203,8 @@ function CheckoutPreferenceSelector({
 }
 
 type KnownCheckoutProfile = {
+  customer_ref?: string;
+  match_source?: string;
   email?: string;
   phone?: string;
   address?: {
@@ -1083,6 +1292,7 @@ async function initiateShiprocketAddressLogin(formData: FormData, env: Env) {
 
 async function verifyShiprocketAddressLogin(formData: FormData, env: Env) {
   const otp = String(formData.get('otp') || '').replace(/\D/g, '');
+  const phone = String(formData.get('phone') || '').replace(/\D/g, '');
   if (!/^\d{6}$/.test(otp)) return {error: 'Enter the six-digit OTP.'};
   try {
     const verified = await shiprocketRequest(
@@ -1100,7 +1310,24 @@ async function verifyShiprocketAddressLogin(formData: FormData, env: Env) {
     const customer = await shiprocketRequest(env, '/api/v1/customer-data', {
       token: customerToken,
     });
-    return {addresses: customer?.result?.addresses || []};
+    const knownProfile = await loadCheckoutProfileByPhone(phone, env);
+    const shiprocketAddresses = customer?.result?.addresses || [];
+    const shiprocketEmail = shiprocketAddresses.find((candidate: any) =>
+      isUsableCheckoutEmail(candidate?.email),
+    )?.email;
+    const resolvedEmail = isUsableCheckoutEmail(shiprocketEmail)
+      ? shiprocketEmail
+      : isUsableCheckoutEmail(knownProfile?.email)
+        ? knownProfile?.email
+        : '';
+    return {
+      addresses: shiprocketAddresses.map((candidate: any) => ({
+        ...candidate,
+        email: resolvedEmail,
+      })),
+      phone,
+      resolvedEmail,
+    };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Could not verify OTP.',
@@ -1206,12 +1433,50 @@ async function loadKnownCheckoutProfile(request: Request, env: Env) {
   }
 }
 
+async function loadCheckoutProfileByPhone(phone: string, env: Env) {
+  const normalizedPhone = String(phone || '')
+    .replace(/\D/g, '')
+    .slice(-10);
+  const endpoint = khojSiteActivityEndpoint(
+    env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT,
+  );
+  const token = env.PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN;
+  if (!/^\d{10}$/.test(normalizedPhone) || !endpoint || !token) return null;
+  const url = endpoint.replace(
+    /\/site-activity\/?$/,
+    '/site-activity/checkout-prefill',
+  );
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({token, phone: `+91${normalizedPhone}`}),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as KnownCheckoutProfile & {
+      found?: boolean;
+      success?: boolean;
+    };
+    return payload.success && payload.found ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
 function isCompleteKnownCheckoutProfile(
   profile: KnownCheckoutProfile | null,
 ): profile is KnownCheckoutProfile {
-  const address = profile?.address;
   return Boolean(
     isUsableCheckoutEmail(profile?.email) &&
+    hasCompleteKnownCheckoutAddress(profile),
+  );
+}
+
+function hasCompleteKnownCheckoutAddress(
+  profile?: KnownCheckoutProfile | null,
+): profile is KnownCheckoutProfile {
+  const address = profile?.address;
+  return Boolean(
     profile?.phone &&
     address?.firstName &&
     address.lastName &&
@@ -1268,13 +1533,6 @@ type CheckoutCart = {id: string; checkoutUrl?: string | null};
 function getCheckoutPreference(formData: FormData): CheckoutPreference | null {
   const value = String(formData.get('checkoutPreference') || '');
   return value === 'prepaid' || value === 'cod' ? value : null;
-}
-
-function getSavedCheckoutPreference(cart: any): CheckoutPreference | '' {
-  const value = cart?.attributes?.find(
-    (attribute: any) => attribute.key === 'checkout_payment_preference',
-  )?.value;
-  return value === 'prepaid' || value === 'cod' ? value : '';
 }
 
 async function updateCartCheckoutPreference(
