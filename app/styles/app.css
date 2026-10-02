@@ -2415,6 +2415,70 @@ button.reset:hover:not(:has(> *)) {
   padding: 10px;
 }
 
+.pilot-saved-address {
+  background: #f7f8f4;
+  border: 1px solid #bdcbbb;
+  display: grid;
+  gap: 5px;
+  margin: 18px 0;
+  padding: 15px;
+}
+
+.pilot-saved-address p,
+.pilot-saved-address span,
+.pilot-address-email-note {
+  color: #596858;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.pilot-address-email-note {
+  margin-top: -5px;
+}
+
+.pilot-otp-label {
+  cursor: text;
+}
+
+.pilot-otp-input {
+  display: block;
+  position: relative;
+}
+
+.pilot-otp-input > input {
+  height: 58px;
+  inset: 0;
+  opacity: 0.01;
+  position: absolute;
+  z-index: 2;
+}
+
+.pilot-otp-boxes {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  pointer-events: none;
+}
+
+.pilot-otp-boxes > span {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #bdcbbb;
+  color: #142016;
+  display: flex;
+  font-size: 1.35rem;
+  font-weight: 700;
+  height: 58px;
+  justify-content: center;
+  min-width: 0;
+}
+
+.pilot-otp-input:focus-within .pilot-otp-boxes > span.active {
+  border-color: #0d7236;
+  box-shadow: 0 0 0 2px rgba(13, 114, 54, 0.16);
+}
+
 @media (max-width: 600px) {
   .pilot-address-overlay {
     place-items: stretch;

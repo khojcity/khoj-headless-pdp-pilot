@@ -68,19 +68,27 @@ export async function action({request, context}: Route.ActionArgs) {
         {status: 400},
       );
     }
-    const preparedCart = checkoutIdentity
-      ? await prepareCheckoutWithIdentity(
-          context,
-          currentCart,
-          checkoutPreference,
-          checkoutIdentity,
-        )
-      : await prepareKnownVisitorCheckout(
-          request,
-          context,
-          currentCart,
-          checkoutPreference,
-        );
+    let preparedCart;
+    if (checkoutIdentity) {
+      preparedCart = await prepareCheckoutWithIdentity(
+        context,
+        currentCart,
+        checkoutPreference,
+        checkoutIdentity,
+      );
+    } else {
+      const knownProfile = await loadKnownCheckoutProfile(request, context.env);
+      if (!isCompleteKnownCheckoutProfile(knownProfile)) {
+        return redirect('/cart?address=required');
+      }
+      preparedCart = await prepareKnownVisitorCheckout(
+        request,
+        context,
+        currentCart,
+        checkoutPreference,
+        knownProfile,
+      );
+    }
     return redirect(preparedCart.checkoutUrl || currentCart.checkoutUrl);
   }
 
@@ -211,13 +219,23 @@ export async function action({request, context}: Route.ActionArgs) {
   );
 }
 
-export async function loader({context}: Route.LoaderArgs) {
+export async function loader({context, request}: Route.LoaderArgs) {
   const {cart} = context;
-  return await cart.get();
+  const [cartResult, knownProfile] = await Promise.all([
+    cart.get(),
+    loadKnownCheckoutProfile(request, context.env),
+  ]);
+  const forceAddressFlow =
+    new URL(request.url).searchParams.get('address') === 'required';
+  return {
+    cart: cartResult,
+    knownCheckoutReady:
+      !forceAddressFlow && isCompleteKnownCheckoutProfile(knownProfile),
+  };
 }
 
 export default function Cart() {
-  const cart = useLoaderData<typeof loader>();
+  const {cart, knownCheckoutReady} = useLoaderData<typeof loader>();
   const lines = cart?.lines?.nodes || [];
   const hasItems = lines.length > 0;
   const totalQuantity = cart?.totalQuantity || 0;
@@ -307,6 +325,7 @@ export default function Cart() {
               {cart?.checkoutUrl ? (
                 <CheckoutStartButton
                   checkoutPreference={checkoutPreference}
+                  knownCheckoutReady={knownCheckoutReady}
                   label="Proceed to checkout"
                   onClick={() => setAddressFlowOpen(true)}
                 />
@@ -331,6 +350,7 @@ export default function Cart() {
               </div>
               <CheckoutStartButton
                 checkoutPreference={checkoutPreference}
+                knownCheckoutReady={knownCheckoutReady}
                 label="Proceed to checkout"
                 onClick={() => setAddressFlowOpen(true)}
               />
@@ -358,13 +378,20 @@ function CartInfographic({alt, src}: {alt: string; src: string}) {
 
 function CheckoutStartButton({
   checkoutPreference,
+  knownCheckoutReady,
   label,
   onClick,
 }: {
   checkoutPreference: string;
+  knownCheckoutReady: boolean;
   label: string;
   onClick: () => void;
 }) {
+  if (knownCheckoutReady) {
+    return (
+      <CheckoutForm checkoutPreference={checkoutPreference} label={label} />
+    );
+  }
   return (
     <button
       className="pilot-button pilot-button-primary"
@@ -401,6 +428,7 @@ function AddressCheckoutFlow({
     'phone',
   );
   const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
   const [loginToken, setLoginToken] = useState('');
   const [address, setAddress] = useState<DeliveryAddress | null>(null);
   useEffect(() => {
@@ -490,18 +518,37 @@ function AddressCheckoutFlow({
               <p className="pilot-kicker">Verify mobile</p>
               <h2>Enter OTP</h2>
               <p>Sent to +91 {phone}</p>
-              <label>
+              <label className="pilot-otp-label">
                 One-time password
-                <input
-                  name="otp"
-                  inputMode="numeric"
-                  pattern="[0-9]{4,8}"
-                  required
-                />
+                <span className="pilot-otp-input">
+                  <input
+                    aria-label="Six-digit one-time password"
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
+                    maxLength={6}
+                    name="otp"
+                    pattern="[0-9]{6}"
+                    required
+                    value={otp}
+                    onChange={(event) =>
+                      setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))
+                    }
+                  />
+                  <span aria-hidden="true" className="pilot-otp-boxes">
+                    {Array.from({length: 6}, (_, index) => (
+                      <span
+                        className={index === otp.length ? 'active' : ''}
+                        key={index}
+                      >
+                        {otp[index] || ''}
+                      </span>
+                    ))}
+                  </span>
+                </span>
               </label>
               <button
                 className="pilot-button pilot-button-primary"
-                disabled={busy}
+                disabled={busy || otp.length !== 6}
               >
                 Verify and fetch address
               </button>
@@ -546,6 +593,67 @@ function CheckoutIdentityForm({
   manual?: boolean;
   onManual: () => void;
 }) {
+  if (!manual) {
+    return (
+      <Form method="post" className="pilot-address-form">
+        <input name="_intent" type="hidden" value="prepareCheckout" />
+        <input name="addressFlow" type="hidden" value="completed" />
+        <input
+          name="checkoutPreference"
+          type="hidden"
+          value={checkoutPreference}
+        />
+        <input
+          name="firstName"
+          type="hidden"
+          value={address.first_name || ''}
+        />
+        <input name="lastName" type="hidden" value={address.last_name || ''} />
+        <input name="address1" type="hidden" value={address.line1 || ''} />
+        <input name="address2" type="hidden" value={address.line2 || ''} />
+        <input name="zip" type="hidden" value={address.pincode || ''} />
+        <input name="city" type="hidden" value={address.city || ''} />
+        <input name="province" type="hidden" value={address.state || ''} />
+        <input name="phone" type="hidden" value={address.phone || ''} />
+        <p className="pilot-kicker">Saved address found</p>
+        <h2>Confirm delivery details</h2>
+        <section className="pilot-saved-address">
+          <strong>
+            {[address.first_name, address.last_name].filter(Boolean).join(' ')}
+          </strong>
+          <p>
+            {[
+              address.line1,
+              address.line2,
+              address.city,
+              address.state,
+              address.pincode,
+            ]
+              .filter(Boolean)
+              .join(', ')}
+          </p>
+          <span>{address.phone}</span>
+        </section>
+        <label>
+          Email address
+          <input name="email" type="email" required />
+        </label>
+        <p className="pilot-address-email-note">
+          Required for order confirmation and delivery updates.
+        </p>
+        <button className="pilot-button pilot-button-primary" type="submit">
+          Continue to secure checkout
+        </button>
+        <button
+          className="pilot-address-secondary"
+          onClick={onManual}
+          type="button"
+        >
+          Change delivery address
+        </button>
+      </Form>
+    );
+  }
   return (
     <Form method="post" className="pilot-address-form">
       <input name="_intent" type="hidden" value="prepareCheckout" />
@@ -841,13 +949,15 @@ async function initiateShiprocketAddressLogin(formData: FormData, env: Env) {
 }
 
 async function verifyShiprocketAddressLogin(formData: FormData, env: Env) {
+  const otp = String(formData.get('otp') || '').replace(/\D/g, '');
+  if (!/^\d{6}$/.test(otp)) return {error: 'Enter the six-digit OTP.'};
   try {
     const verified = await shiprocketRequest(
       env,
       '/api/v1/access-token/s2s-login/verify',
       {
         token: String(formData.get('loginToken') || ''),
-        otp: String(formData.get('otp') || ''),
+        otp,
         user_address_consent: true,
       },
     );
@@ -963,6 +1073,23 @@ async function loadKnownCheckoutProfile(request: Request, env: Env) {
   }
 }
 
+function isCompleteKnownCheckoutProfile(
+  profile: KnownCheckoutProfile | null,
+): profile is KnownCheckoutProfile {
+  const address = profile?.address;
+  return Boolean(
+    profile?.email &&
+    /^\S+@\S+\.\S+$/.test(profile.email) &&
+    profile.phone &&
+    address?.firstName &&
+    address.lastName &&
+    address.address1 &&
+    address.city &&
+    (address.province || address.provinceCode) &&
+    address.zip,
+  );
+}
+
 async function prepareKnownVisitorCheckout(
   request: Request,
   context: Route.ActionArgs['context'],
@@ -970,6 +1097,7 @@ async function prepareKnownVisitorCheckout(
     Awaited<ReturnType<Route.ActionArgs['context']['cart']['get']>>
   >,
   checkoutPreference?: CheckoutPreference,
+  knownProfile?: KnownCheckoutProfile | null,
 ) {
   const cartWithPreference = checkoutPreference
     ? await updateCartCheckoutPreference(
@@ -978,7 +1106,8 @@ async function prepareKnownVisitorCheckout(
         checkoutPreference,
       )
     : currentCart;
-  const profile = await loadKnownCheckoutProfile(request, context.env);
+  const profile =
+    knownProfile || (await loadKnownCheckoutProfile(request, context.env));
   if (!profile) {
     return checkoutPreference
       ? await selectCheckoutDeliveryOption(
