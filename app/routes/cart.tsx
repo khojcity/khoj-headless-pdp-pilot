@@ -8,7 +8,7 @@ import {
   useFetcher,
   type HeadersFunction,
 } from 'react-router';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm, Image, Money} from '@shopify/hydrogen';
@@ -359,7 +359,9 @@ export default function Cart() {
           {addressFlowOpen ? (
             <AddressCheckoutFlow
               checkoutPreference={checkoutPreference}
+              itemCount={totalQuantity}
               onClose={() => setAddressFlowOpen(false)}
+              total={formatRupees(displayTotal)}
             />
           ) : null}
         </>
@@ -414,14 +416,27 @@ type DeliveryAddress = {
   pincode?: string;
   country?: string;
   phone?: string;
+  email?: string;
 };
+
+function isUsableCheckoutEmail(email?: string) {
+  const normalized = String(email || '').trim();
+  return (
+    /^\S+@\S+\.\S+$/.test(normalized) &&
+    !/^\d{10}@fastrr\.com$/i.test(normalized)
+  );
+}
 
 function AddressCheckoutFlow({
   checkoutPreference,
+  itemCount,
   onClose,
+  total,
 }: {
   checkoutPreference: string;
+  itemCount: number;
   onClose: () => void;
+  total: string;
 }) {
   const fetcher = useFetcher<any>();
   const [step, setStep] = useState<'phone' | 'otp' | 'address' | 'manual'>(
@@ -431,10 +446,13 @@ function AddressCheckoutFlow({
   const [otp, setOtp] = useState('');
   const [loginToken, setLoginToken] = useState('');
   const [address, setAddress] = useState<DeliveryAddress | null>(null);
+  const [resendSeconds, setResendSeconds] = useState(30);
+  const submittedOtp = useRef('');
   useEffect(() => {
     if (fetcher.data?.loginToken) {
       setLoginToken(fetcher.data.loginToken);
       setStep('otp');
+      setResendSeconds(30);
     }
     if (fetcher.data?.addresses) {
       setAddress(fetcher.data.addresses[0] || null);
@@ -443,6 +461,54 @@ function AddressCheckoutFlow({
   }, [fetcher.data]);
   const busy = fetcher.state !== 'idle';
   const error = fetcher.data?.error;
+  useEffect(() => {
+    if (step !== 'otp' || resendSeconds <= 0) return;
+    const timer = window.setTimeout(
+      () => setResendSeconds((seconds) => seconds - 1),
+      1000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [resendSeconds, step]);
+  useEffect(() => {
+    if (
+      step !== 'otp' ||
+      otp.length !== 6 ||
+      busy ||
+      !loginToken ||
+      submittedOtp.current === otp
+    ) {
+      return;
+    }
+    submittedOtp.current = otp;
+    fetcher.submit(
+      {_intent: 'shiprocketAddressVerify', loginToken, phone, otp},
+      {method: 'post'},
+    );
+  }, [busy, fetcher, loginToken, otp, phone, step]);
+  const goBack = () => {
+    if (step === 'phone') return onClose();
+    if (step === 'otp') {
+      setOtp('');
+      submittedOtp.current = '';
+      setStep('phone');
+      return;
+    }
+    if (step === 'manual' && address) {
+      setStep('address');
+      return;
+    }
+    setStep('phone');
+  };
+  const resendOtp = () => {
+    if (busy || resendSeconds > 0) return;
+    setOtp('');
+    submittedOtp.current = '';
+    setResendSeconds(30);
+    fetcher.submit(
+      {_intent: 'shiprocketAddressInitiate', phone, consent: 'on'},
+      {method: 'post'},
+    );
+  };
   return (
     <div
       className="pilot-address-overlay"
@@ -452,16 +518,22 @@ function AddressCheckoutFlow({
     >
       <section className="pilot-address-sheet">
         <header>
-          <button aria-label="Close" onClick={onClose} type="button">
-            ×
+          <button
+            aria-label={step === 'phone' ? 'Close' : 'Go back'}
+            onClick={goBack}
+            type="button"
+          >
+            {step === 'phone' ? '×' : '‹'}
           </button>
           <strong>KHOJ.CITY</strong>
           <span />
         </header>
         <div className="pilot-address-body">
           <div className="pilot-address-summary">
-            <span>Order summary</span>
-            <strong>Secure checkout</strong>
+            <span>
+              Order summary ({itemCount} {itemCount === 1 ? 'item' : 'items'})
+            </span>
+            <strong>{total}</strong>
           </div>
           {error ? <p className="pilot-address-error">{error}</p> : null}
           {step === 'phone' ? (
@@ -476,16 +548,22 @@ function AddressCheckoutFlow({
               <p>Verify your mobile to retrieve saved delivery addresses.</p>
               <label>
                 Mobile number
-                <input
-                  name="phone"
-                  inputMode="numeric"
-                  pattern="[0-9]{10}"
-                  required
-                  value={phone}
-                  onChange={(e) =>
-                    setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))
-                  }
-                />
+                <span className="pilot-phone-input">
+                  <span aria-hidden="true">🇮🇳 +91</span>
+                  <input
+                    autoComplete="tel-national"
+                    aria-label="10-digit mobile number"
+                    name="phone"
+                    inputMode="numeric"
+                    pattern="[0-9]{10}"
+                    placeholder="10-digit mobile number"
+                    required
+                    value={phone}
+                    onChange={(e) =>
+                      setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))
+                    }
+                  />
+                </span>
               </label>
               <label className="pilot-address-consent">
                 <input name="consent" required type="checkbox" />I consent to
@@ -518,6 +596,17 @@ function AddressCheckoutFlow({
               <p className="pilot-kicker">Verify mobile</p>
               <h2>Enter OTP</h2>
               <p>Sent to +91 {phone}</p>
+              <button
+                className="pilot-address-edit-phone"
+                onClick={() => {
+                  setOtp('');
+                  submittedOtp.current = '';
+                  setStep('phone');
+                }}
+                type="button"
+              >
+                Edit mobile number
+              </button>
               <label className="pilot-otp-label">
                 One-time password
                 <span className="pilot-otp-input">
@@ -549,8 +638,21 @@ function AddressCheckoutFlow({
               <button
                 className="pilot-button pilot-button-primary"
                 disabled={busy || otp.length !== 6}
+                onClick={() => {
+                  submittedOtp.current = otp;
+                }}
               >
-                Verify and fetch address
+                {busy ? 'Verifying...' : 'Verify and fetch address'}
+              </button>
+              <button
+                className="pilot-address-resend"
+                disabled={busy || resendSeconds > 0}
+                onClick={resendOtp}
+                type="button"
+              >
+                {resendSeconds > 0
+                  ? `Resend OTP in ${resendSeconds}s`
+                  : 'Resend OTP'}
               </button>
               <button
                 className="pilot-address-secondary"
@@ -576,6 +678,19 @@ function AddressCheckoutFlow({
               onManual={() => setStep('phone')}
             />
           ) : null}
+          <footer className="pilot-address-footer">
+            <div>
+              <Link to="/policies/terms-of-service">Terms</Link>
+              <Link to="/policies/privacy-policy">Privacy</Link>
+            </div>
+            <a
+              href="https://www.shiprocket.in/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Address retrieval powered by Shiprocket
+            </a>
+          </footer>
         </div>
       </section>
     </div>
@@ -593,6 +708,7 @@ function CheckoutIdentityForm({
   manual?: boolean;
   onManual: () => void;
 }) {
+  const hasUsableEmail = isUsableCheckoutEmail(address.email);
   if (!manual) {
     return (
       <Form method="post" className="pilot-address-form">
@@ -615,12 +731,22 @@ function CheckoutIdentityForm({
         <input name="city" type="hidden" value={address.city || ''} />
         <input name="province" type="hidden" value={address.state || ''} />
         <input name="phone" type="hidden" value={address.phone || ''} />
+        {hasUsableEmail ? (
+          <input name="email" type="hidden" value={address.email} />
+        ) : null}
         <p className="pilot-kicker">Saved address found</p>
         <h2>Confirm delivery details</h2>
         <section className="pilot-saved-address">
-          <strong>
-            {[address.first_name, address.last_name].filter(Boolean).join(' ')}
-          </strong>
+          <div className="pilot-saved-address-heading">
+            <strong>
+              {[address.first_name, address.last_name]
+                .filter(Boolean)
+                .join(' ')}
+            </strong>
+            <button onClick={onManual} type="button">
+              Change
+            </button>
+          </div>
           <p>
             {[
               address.line1,
@@ -634,22 +760,29 @@ function CheckoutIdentityForm({
           </p>
           <span>{address.phone}</span>
         </section>
-        <label>
-          Email address
-          <input name="email" type="email" required />
-        </label>
-        <p className="pilot-address-email-note">
-          Required for order confirmation and delivery updates.
-        </p>
+        {hasUsableEmail ? (
+          <p className="pilot-address-email-confirmed">
+            Order updates will be sent to {address.email}.
+          </p>
+        ) : (
+          <div className="pilot-address-email-capture">
+            <p>
+              Email is required for order confirmation and delivery updates.
+            </p>
+            <label>
+              Email address
+              <input
+                autoComplete="email"
+                inputMode="email"
+                name="email"
+                required
+                type="email"
+              />
+            </label>
+          </div>
+        )}
         <button className="pilot-button pilot-button-primary" type="submit">
           Continue to secure checkout
-        </button>
-        <button
-          className="pilot-address-secondary"
-          onClick={onManual}
-          type="button"
-        >
-          Change delivery address
         </button>
       </Form>
     );
@@ -980,7 +1113,7 @@ function checkoutIdentityFromForm(formData: FormData) {
   const email = value('email');
   const phone = value('phone').replace(/\D/g, '');
   if (
-    !/^\S+@\S+\.\S+$/.test(email) ||
+    !isUsableCheckoutEmail(email) ||
     !value('firstName') ||
     !value('lastName') ||
     !value('address1') ||
@@ -1078,9 +1211,8 @@ function isCompleteKnownCheckoutProfile(
 ): profile is KnownCheckoutProfile {
   const address = profile?.address;
   return Boolean(
-    profile?.email &&
-    /^\S+@\S+\.\S+$/.test(profile.email) &&
-    profile.phone &&
+    isUsableCheckoutEmail(profile?.email) &&
+    profile?.phone &&
     address?.firstName &&
     address.lastName &&
     address.address1 &&

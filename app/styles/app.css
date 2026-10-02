@@ -2344,6 +2344,8 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-address-sheet > header button {
   font-size: 1.6rem;
+  min-height: 44px;
+  min-width: 44px;
 }
 .pilot-address-body {
   max-height: calc(100vh - 58px);
@@ -2379,6 +2381,22 @@ button.reset:hover:not(:has(> *)) {
   min-height: 46px;
   padding: 11px 12px;
   width: 100%;
+}
+.pilot-phone-input {
+  align-items: center;
+  border: 1px solid #bdcbbb;
+  display: grid;
+  grid-template-columns: auto 1fr;
+}
+.pilot-phone-input > span {
+  border-right: 1px solid #e1ddd2;
+  color: #142016;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+.pilot-address-body label .pilot-phone-input input {
+  border: 0;
+  min-width: 0;
 }
 .pilot-address-consent {
   align-items: start;
@@ -2424,6 +2442,42 @@ button.reset:hover:not(:has(> *)) {
   padding: 15px;
 }
 
+.pilot-saved-address-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.pilot-saved-address-heading button,
+.pilot-address-edit-phone,
+.pilot-address-resend {
+  background: transparent;
+  border: 0;
+  color: #0d7236;
+  cursor: pointer;
+  font: inherit;
+  padding: 4px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pilot-address-edit-phone {
+  display: block;
+  font-size: 0.78rem;
+  margin: -6px 0 10px;
+}
+
+.pilot-address-resend {
+  display: block;
+  margin: 10px auto 0;
+}
+
+.pilot-address-resend:disabled {
+  color: #7b867a;
+  cursor: default;
+  text-decoration: none;
+}
+
 .pilot-saved-address p,
 .pilot-saved-address span,
 .pilot-address-email-note {
@@ -2435,6 +2489,48 @@ button.reset:hover:not(:has(> *)) {
 
 .pilot-address-email-note {
   margin-top: -5px;
+}
+
+.pilot-address-email-capture {
+  background: #fff7ed;
+  border-left: 3px solid #e58222;
+  margin: 14px 0;
+  padding: 10px 12px 2px;
+}
+
+.pilot-address-email-capture > p,
+.pilot-address-email-confirmed {
+  color: #596858;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.pilot-address-email-confirmed {
+  background: #f1f7f1;
+  border-left: 3px solid #0d7236;
+  margin: 14px 0;
+  padding: 10px 12px;
+}
+
+.pilot-address-footer {
+  align-items: center;
+  border-top: 1px solid #e1ddd2;
+  color: #6c766b;
+  display: flex;
+  font-size: 0.7rem;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 14px;
+}
+
+.pilot-address-footer div {
+  display: flex;
+  gap: 12px;
+}
+
+.pilot-address-footer a {
+  color: inherit;
 }
 
 .pilot-otp-label {
@@ -2492,6 +2588,11 @@ button.reset:hover:not(:has(> *)) {
   }
   .pilot-address-grid .wide {
     grid-column: auto;
+  }
+  .pilot-address-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
   }
 }
 
