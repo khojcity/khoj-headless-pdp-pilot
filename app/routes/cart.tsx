@@ -41,6 +41,10 @@ function khojSiteActivityEndpoint(endpoint?: string) {
     : rawEndpoint;
 }
 
+function khojCheckoutPrefillEndpoint(endpoint?: string) {
+  return endpoint || KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT;
+}
+
 export async function action({request, context}: Route.ActionArgs) {
   const {cart} = context;
 
@@ -1394,7 +1398,7 @@ async function prepareCheckoutWithIdentity(
 }
 
 async function loadKnownCheckoutProfile(request: Request, env: Env) {
-  const endpoint = khojSiteActivityEndpoint(
+  const endpoint = khojCheckoutPrefillEndpoint(
     env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT,
   );
   const token = env.PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN;
@@ -1437,7 +1441,7 @@ async function loadCheckoutProfileByPhone(phone: string, env: Env) {
   const normalizedPhone = String(phone || '')
     .replace(/\D/g, '')
     .slice(-10);
-  const endpoint = khojSiteActivityEndpoint(
+  const endpoint = khojCheckoutPrefillEndpoint(
     env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT,
   );
   const token = env.PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN;
