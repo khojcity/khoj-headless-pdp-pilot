@@ -5,6 +5,7 @@ import {
   data,
   redirect,
   useNavigation,
+  useFetcher,
   type HeadersFunction,
 } from 'react-router';
 import {useEffect, useState} from 'react';
@@ -28,7 +29,9 @@ const KHOJ_STUCK_SITE_ACTIVITY_HOSTS = [
 function khojSiteActivityEndpoint(endpoint?: string) {
   const rawEndpoint = endpoint || '';
   if (!rawEndpoint) return KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT;
-  return KHOJ_STUCK_SITE_ACTIVITY_HOSTS.some((host) => rawEndpoint.includes(host))
+  return KHOJ_STUCK_SITE_ACTIVITY_HOSTS.some((host) =>
+    rawEndpoint.includes(host),
+  )
     ? KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT
     : rawEndpoint;
 }
@@ -38,6 +41,14 @@ export async function action({request, context}: Route.ActionArgs) {
 
   const formData = await request.formData();
   const intent = String(formData.get('_intent') || '');
+
+  if (intent === 'shiprocketAddressInitiate') {
+    return data(await initiateShiprocketAddressLogin(formData, context.env));
+  }
+
+  if (intent === 'shiprocketAddressVerify') {
+    return data(await verifyShiprocketAddressLogin(formData, context.env));
+  }
 
   if (intent === 'prepareCheckout') {
     const currentCart = await cart.get();
@@ -50,12 +61,26 @@ export async function action({request, context}: Route.ActionArgs) {
       return redirect('/cart?checkoutPreference=required');
     }
 
-    const preparedCart = await prepareKnownVisitorCheckout(
-      request,
-      context,
-      currentCart,
-      checkoutPreference,
-    );
+    const checkoutIdentity = checkoutIdentityFromForm(formData);
+    if (formData.get('addressFlow') === 'completed' && !checkoutIdentity) {
+      return data(
+        {error: 'Enter a valid email and complete delivery address.'},
+        {status: 400},
+      );
+    }
+    const preparedCart = checkoutIdentity
+      ? await prepareCheckoutWithIdentity(
+          context,
+          currentCart,
+          checkoutPreference,
+          checkoutIdentity,
+        )
+      : await prepareKnownVisitorCheckout(
+          request,
+          context,
+          currentCart,
+          checkoutPreference,
+        );
     return redirect(preparedCart.checkoutUrl || currentCart.checkoutUrl);
   }
 
@@ -203,15 +228,14 @@ export default function Cart() {
   );
   const codFee = checkoutPreference === 'cod' ? 60 : 0;
   const displayTotal = summary.subtotal + codFee;
+  const [addressFlowOpen, setAddressFlowOpen] = useState(false);
   return (
     <main className="pilot-cart">
       <div className="pilot-cart-header">
         <div>
           <p className="pilot-kicker">Review your order</p>
           <h1>Your cart</h1>
-          <p>
-            Review your handmade jewellery order before moving to checkout.
-          </p>
+          <p>Review your handmade jewellery order before moving to checkout.</p>
         </div>
       </div>
 
@@ -261,17 +285,11 @@ export default function Cart() {
                 </div>
                 <div>
                   <dt>Shipping</dt>
-                  <dd>
-                    {checkoutPreference === 'cod'
-                      ? 'COD + ₹60'
-                      : 'Free'}
-                  </dd>
+                  <dd>{checkoutPreference === 'cod' ? 'COD + ₹60' : 'Free'}</dd>
                 </div>
                 <div className="pilot-cart-total-row">
                   <dt>Total</dt>
-                  <dd>
-                    {formatRupees(displayTotal)}
-                  </dd>
+                  <dd>{formatRupees(displayTotal)}</dd>
                 </div>
               </dl>
 
@@ -287,9 +305,10 @@ export default function Cart() {
               />
 
               {cart?.checkoutUrl ? (
-                <CheckoutForm
+                <CheckoutStartButton
                   checkoutPreference={checkoutPreference}
                   label="Proceed to checkout"
+                  onClick={() => setAddressFlowOpen(true)}
                 />
               ) : null}
 
@@ -310,11 +329,18 @@ export default function Cart() {
                   <small>Select shipping type</small>
                 ) : null}
               </div>
-              <CheckoutForm
+              <CheckoutStartButton
                 checkoutPreference={checkoutPreference}
                 label="Proceed to checkout"
+                onClick={() => setAddressFlowOpen(true)}
               />
             </div>
+          ) : null}
+          {addressFlowOpen ? (
+            <AddressCheckoutFlow
+              checkoutPreference={checkoutPreference}
+              onClose={() => setAddressFlowOpen(false)}
+            />
           ) : null}
         </>
       )}
@@ -324,17 +350,280 @@ export default function Cart() {
 
 function CartInfographic({alt, src}: {alt: string; src: string}) {
   return (
-    <section
-      className="pilot-cart-infographic"
-      aria-label="Khoj cart benefits"
-    >
-      <img
-        alt={alt}
-        decoding="async"
-        loading="lazy"
-        src={src}
-      />
+    <section className="pilot-cart-infographic" aria-label="Khoj cart benefits">
+      <img alt={alt} decoding="async" loading="lazy" src={src} />
     </section>
+  );
+}
+
+function CheckoutStartButton({
+  checkoutPreference,
+  label,
+  onClick,
+}: {
+  checkoutPreference: string;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className="pilot-button pilot-button-primary"
+      disabled={!checkoutPreference}
+      onClick={onClick}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+}
+
+type DeliveryAddress = {
+  first_name?: string;
+  last_name?: string;
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
+  phone?: string;
+};
+
+function AddressCheckoutFlow({
+  checkoutPreference,
+  onClose,
+}: {
+  checkoutPreference: string;
+  onClose: () => void;
+}) {
+  const fetcher = useFetcher<any>();
+  const [step, setStep] = useState<'phone' | 'otp' | 'address' | 'manual'>(
+    'phone',
+  );
+  const [phone, setPhone] = useState('');
+  const [loginToken, setLoginToken] = useState('');
+  const [address, setAddress] = useState<DeliveryAddress | null>(null);
+  useEffect(() => {
+    if (fetcher.data?.loginToken) {
+      setLoginToken(fetcher.data.loginToken);
+      setStep('otp');
+    }
+    if (fetcher.data?.addresses) {
+      setAddress(fetcher.data.addresses[0] || null);
+      setStep(fetcher.data.addresses.length ? 'address' : 'manual');
+    }
+  }, [fetcher.data]);
+  const busy = fetcher.state !== 'idle';
+  const error = fetcher.data?.error;
+  return (
+    <div
+      className="pilot-address-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Delivery details"
+    >
+      <section className="pilot-address-sheet">
+        <header>
+          <button aria-label="Close" onClick={onClose} type="button">
+            ×
+          </button>
+          <strong>KHOJ.CITY</strong>
+          <span />
+        </header>
+        <div className="pilot-address-body">
+          <div className="pilot-address-summary">
+            <span>Order summary</span>
+            <strong>Secure checkout</strong>
+          </div>
+          {error ? <p className="pilot-address-error">{error}</p> : null}
+          {step === 'phone' ? (
+            <fetcher.Form method="post">
+              <input
+                name="_intent"
+                type="hidden"
+                value="shiprocketAddressInitiate"
+              />
+              <p className="pilot-kicker">Faster checkout</p>
+              <h2>Enter mobile number</h2>
+              <p>Verify your mobile to retrieve saved delivery addresses.</p>
+              <label>
+                Mobile number
+                <input
+                  name="phone"
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
+                  required
+                  value={phone}
+                  onChange={(e) =>
+                    setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))
+                  }
+                />
+              </label>
+              <label className="pilot-address-consent">
+                <input name="consent" required type="checkbox" />I consent to
+                retrieving my saved delivery addresses for this checkout.
+              </label>
+              <button
+                className="pilot-button pilot-button-primary"
+                disabled={busy || phone.length !== 10}
+              >
+                Send OTP
+              </button>
+              <button
+                className="pilot-address-secondary"
+                onClick={() => setStep('manual')}
+                type="button"
+              >
+                Enter address manually
+              </button>
+            </fetcher.Form>
+          ) : null}
+          {step === 'otp' ? (
+            <fetcher.Form method="post">
+              <input
+                name="_intent"
+                type="hidden"
+                value="shiprocketAddressVerify"
+              />
+              <input name="loginToken" type="hidden" value={loginToken} />
+              <input name="phone" type="hidden" value={phone} />
+              <p className="pilot-kicker">Verify mobile</p>
+              <h2>Enter OTP</h2>
+              <p>Sent to +91 {phone}</p>
+              <label>
+                One-time password
+                <input
+                  name="otp"
+                  inputMode="numeric"
+                  pattern="[0-9]{4,8}"
+                  required
+                />
+              </label>
+              <button
+                className="pilot-button pilot-button-primary"
+                disabled={busy}
+              >
+                Verify and fetch address
+              </button>
+              <button
+                className="pilot-address-secondary"
+                onClick={() => setStep('manual')}
+                type="button"
+              >
+                Enter address manually
+              </button>
+            </fetcher.Form>
+          ) : null}
+          {step === 'address' && address ? (
+            <CheckoutIdentityForm
+              address={address}
+              checkoutPreference={checkoutPreference}
+              onManual={() => setStep('manual')}
+            />
+          ) : null}
+          {step === 'manual' ? (
+            <CheckoutIdentityForm
+              address={{phone}}
+              checkoutPreference={checkoutPreference}
+              manual
+              onManual={() => setStep('phone')}
+            />
+          ) : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function CheckoutIdentityForm({
+  address,
+  checkoutPreference,
+  manual = false,
+  onManual,
+}: {
+  address: DeliveryAddress;
+  checkoutPreference: string;
+  manual?: boolean;
+  onManual: () => void;
+}) {
+  return (
+    <Form method="post" className="pilot-address-form">
+      <input name="_intent" type="hidden" value="prepareCheckout" />
+      <input name="addressFlow" type="hidden" value="completed" />
+      <input
+        name="checkoutPreference"
+        type="hidden"
+        value={checkoutPreference}
+      />
+      <p className="pilot-kicker">
+        {manual ? 'Manual delivery address' : 'Saved address found'}
+      </p>
+      <h2>
+        {manual ? 'Where should we deliver?' : 'Confirm delivery details'}
+      </h2>
+      <p>Email is required for order confirmation and delivery updates.</p>
+      <div className="pilot-address-grid">
+        <label className="wide">
+          Email address
+          <input name="email" type="email" required />
+        </label>
+        <label>
+          First name
+          <input
+            defaultValue={address.first_name || ''}
+            name="firstName"
+            required
+          />
+        </label>
+        <label>
+          Last name
+          <input
+            defaultValue={address.last_name || ''}
+            name="lastName"
+            required
+          />
+        </label>
+        <label className="wide">
+          House number and street
+          <input defaultValue={address.line1 || ''} name="address1" required />
+        </label>
+        <label className="wide">
+          Area and landmark
+          <input defaultValue={address.line2 || ''} name="address2" />
+        </label>
+        <label>
+          Pincode
+          <input
+            defaultValue={address.pincode || ''}
+            name="zip"
+            inputMode="numeric"
+            required
+          />
+        </label>
+        <label>
+          City
+          <input defaultValue={address.city || ''} name="city" required />
+        </label>
+        <label>
+          State
+          <input defaultValue={address.state || ''} name="province" required />
+        </label>
+        <label>
+          Mobile
+          <input defaultValue={address.phone || ''} name="phone" required />
+        </label>
+      </div>
+      <button className="pilot-button pilot-button-primary" type="submit">
+        Continue to secure checkout
+      </button>
+      <button
+        className="pilot-address-secondary"
+        onClick={onManual}
+        type="button"
+      >
+        {manual ? 'Use saved address' : 'Enter a different address'}
+      </button>
+    </Form>
   );
 }
 
@@ -484,8 +773,160 @@ type KnownCheckoutProfile = {
   };
 };
 
+async function shiprocketRequest(
+  env: Env,
+  path: string,
+  body: Record<string, unknown>,
+  signed = false,
+) {
+  const baseUrl =
+    env.SHIPROCKET_CHECKOUT_BASE_URL || 'https://checkout-api.shiprocket.com';
+  const headers: Record<string, string> = {'Content-Type': 'application/json'};
+  const payload = JSON.stringify(body);
+  if (signed) {
+    if (!env.SHIPROCKET_CHECKOUT_API_KEY || !env.SHIPROCKET_CHECKOUT_API_SECRET)
+      throw new Error('Saved-address service is not configured.');
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(env.SHIPROCKET_CHECKOUT_API_SECRET),
+      {name: 'HMAC', hash: 'SHA-256'},
+      false,
+      ['sign'],
+    );
+    const signature = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      new TextEncoder().encode(payload),
+    );
+    headers['X-Api-Key'] = env.SHIPROCKET_CHECKOUT_API_KEY;
+    headers['X-Api-HMAC-SHA256'] = btoa(
+      String.fromCharCode(...new Uint8Array(signature)),
+    );
+  }
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
+    method: 'POST',
+    headers,
+    body: payload,
+  });
+  const result = (await response.json()) as any;
+  if (!response.ok || result?.ok === false)
+    throw new Error(
+      result?.error?.message || 'Saved-address service request failed.',
+    );
+  return result;
+}
+
+async function initiateShiprocketAddressLogin(formData: FormData, env: Env) {
+  const phone = String(formData.get('phone') || '').replace(/\D/g, '');
+  if (!/^\d{10}$/.test(phone) || formData.get('consent') !== 'on')
+    return {error: 'Enter a valid 10-digit mobile number and accept consent.'};
+  try {
+    const result = await shiprocketRequest(
+      env,
+      '/api/v1/access-token/s2s-login/initiate',
+      {
+        country_code: '91',
+        phone,
+        modes: ['SMS'],
+        timestamp: new Date().toISOString(),
+      },
+      true,
+    );
+    return {loginToken: result?.result?.token, phone};
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Could not send OTP.',
+    };
+  }
+}
+
+async function verifyShiprocketAddressLogin(formData: FormData, env: Env) {
+  try {
+    const verified = await shiprocketRequest(
+      env,
+      '/api/v1/access-token/s2s-login/verify',
+      {
+        token: String(formData.get('loginToken') || ''),
+        otp: String(formData.get('otp') || ''),
+        user_address_consent: true,
+      },
+    );
+    const customerToken = verified?.result?.authorised_customer_token;
+    if (!customerToken)
+      return {error: 'OTP verification did not return an address token.'};
+    const customer = await shiprocketRequest(env, '/api/v1/customer-data', {
+      token: customerToken,
+    });
+    return {addresses: customer?.result?.addresses || []};
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Could not verify OTP.',
+    };
+  }
+}
+
+function checkoutIdentityFromForm(formData: FormData) {
+  const value = (name: string) => String(formData.get(name) || '').trim();
+  const email = value('email');
+  const phone = value('phone').replace(/\D/g, '');
+  if (
+    !/^\S+@\S+\.\S+$/.test(email) ||
+    !value('firstName') ||
+    !value('lastName') ||
+    !value('address1') ||
+    !value('city') ||
+    !value('province') ||
+    !/^\d{6}$/.test(value('zip')) ||
+    phone.length < 10
+  )
+    return null;
+  return {
+    countryCode: 'IN',
+    email,
+    phone: `+91${phone.slice(-10)}`,
+    deliveryAddressPreferences: [
+      {
+        deliveryAddress: {
+          firstName: value('firstName'),
+          lastName: value('lastName'),
+          address1: value('address1'),
+          address2: value('address2'),
+          city: value('city'),
+          province: value('province'),
+          country: 'India',
+          zip: value('zip'),
+          phone: `+91${phone.slice(-10)}`,
+        },
+      },
+    ],
+  };
+}
+
+async function prepareCheckoutWithIdentity(
+  context: Route.ActionArgs['context'],
+  currentCart: NonNullable<
+    Awaited<ReturnType<Route.ActionArgs['context']['cart']['get']>>
+  >,
+  checkoutPreference: CheckoutPreference,
+  buyerIdentity: Record<string, unknown>,
+) {
+  const preferred = await updateCartCheckoutPreference(
+    context,
+    currentCart,
+    checkoutPreference,
+  );
+  const result = await context.cart.updateBuyerIdentity(buyerIdentity as any);
+  return await selectCheckoutDeliveryOption(
+    context,
+    result.cart || preferred,
+    checkoutPreference,
+  );
+}
+
 async function loadKnownCheckoutProfile(request: Request, env: Env) {
-  const endpoint = khojSiteActivityEndpoint(env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT);
+  const endpoint = khojSiteActivityEndpoint(
+    env.PUBLIC_KHOJ_SITE_ACTIVITY_ENDPOINT,
+  );
   const token = env.PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN;
   if (!endpoint || !token) return null;
 
@@ -495,7 +936,10 @@ async function loadKnownCheckoutProfile(request: Request, env: Env) {
   const visitorCustomerId = cookies.khoj_visitor_customer_id || '';
   if (!visitorId && !visitorCustomerId) return null;
 
-  const url = endpoint.replace(/\/site-activity\/?$/, '/site-activity/checkout-prefill');
+  const url = endpoint.replace(
+    /\/site-activity\/?$/,
+    '/site-activity/checkout-prefill',
+  );
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -522,11 +966,17 @@ async function loadKnownCheckoutProfile(request: Request, env: Env) {
 async function prepareKnownVisitorCheckout(
   request: Request,
   context: Route.ActionArgs['context'],
-  currentCart: NonNullable<Awaited<ReturnType<Route.ActionArgs['context']['cart']['get']>>>,
+  currentCart: NonNullable<
+    Awaited<ReturnType<Route.ActionArgs['context']['cart']['get']>>
+  >,
   checkoutPreference?: CheckoutPreference,
 ) {
   const cartWithPreference = checkoutPreference
-    ? await updateCartCheckoutPreference(context, currentCart, checkoutPreference)
+    ? await updateCartCheckoutPreference(
+        context,
+        currentCart,
+        checkoutPreference,
+      )
     : currentCart;
   const profile = await loadKnownCheckoutProfile(request, context.env);
   if (!profile) {
@@ -540,12 +990,14 @@ async function prepareKnownVisitorCheckout(
   }
 
   const buyerIdentity = knownCheckoutProfileToBuyerIdentity(profile);
-  const result = await context.cart.updateBuyerIdentity(
-    buyerIdentity as any,
-  );
+  const result = await context.cart.updateBuyerIdentity(buyerIdentity as any);
   const cartWithBuyer = result.cart || cartWithPreference;
   return checkoutPreference
-    ? await selectCheckoutDeliveryOption(context, cartWithBuyer, checkoutPreference)
+    ? await selectCheckoutDeliveryOption(
+        context,
+        cartWithBuyer,
+        checkoutPreference,
+      )
     : cartWithBuyer;
 }
 
@@ -566,27 +1018,32 @@ function getSavedCheckoutPreference(cart: any): CheckoutPreference | '' {
 
 async function updateCartCheckoutPreference(
   context: Route.ActionArgs['context'],
-  currentCart: NonNullable<Awaited<ReturnType<Route.ActionArgs['context']['cart']['get']>>>,
+  currentCart: NonNullable<
+    Awaited<ReturnType<Route.ActionArgs['context']['cart']['get']>>
+  >,
   checkoutPreference: CheckoutPreference,
 ) {
-  const result = await context.storefront.mutate(CART_ATTRIBUTES_UPDATE_MUTATION, {
-    variables: {
-      cartId: currentCart.id,
-      attributes: [
-        {
-          key: 'checkout_payment_preference',
-          value: checkoutPreference,
-        },
-        {
-          key: 'checkout_shipping_label',
-          value:
-            checkoutPreference === 'cod'
-              ? 'Cash on delivery - COD shipping charge ₹60'
-              : 'Prepaid - Free shipping',
-        },
-      ],
+  const result = await context.storefront.mutate(
+    CART_ATTRIBUTES_UPDATE_MUTATION,
+    {
+      variables: {
+        cartId: currentCart.id,
+        attributes: [
+          {
+            key: 'checkout_payment_preference',
+            value: checkoutPreference,
+          },
+          {
+            key: 'checkout_shipping_label',
+            value:
+              checkoutPreference === 'cod'
+                ? 'Cash on delivery - COD shipping charge ₹60'
+                : 'Prepaid - Free shipping',
+          },
+        ],
+      },
     },
-  });
+  );
 
   return result?.cartAttributesUpdate?.cart || currentCart;
 }
@@ -597,13 +1054,19 @@ async function selectCheckoutDeliveryOption(
   checkoutPreference: CheckoutPreference,
 ) {
   try {
-    const deliveryCart = await context.storefront.query(CART_DELIVERY_OPTIONS_QUERY, {
-      variables: {cartId: currentCart.id},
-    });
+    const deliveryCart = await context.storefront.query(
+      CART_DELIVERY_OPTIONS_QUERY,
+      {
+        variables: {cartId: currentCart.id},
+      },
+    );
     const groups = deliveryCart?.cart?.deliveryGroups?.nodes || [];
     const selectedDeliveryOptions = groups
       .map((group: any) => {
-        const option = chooseDeliveryOption(group.deliveryOptions, checkoutPreference);
+        const option = chooseDeliveryOption(
+          group.deliveryOptions,
+          checkoutPreference,
+        );
         if (!option?.handle) return null;
         return {
           deliveryGroupId: group.id,
@@ -636,11 +1099,15 @@ function chooseDeliveryOption(
 ) {
   if (checkoutPreference === 'cod') {
     return (
-      deliveryOptions.find((option) => deliveryOptionMatches(option, ['cod'])) ||
+      deliveryOptions.find((option) =>
+        deliveryOptionMatches(option, ['cod']),
+      ) ||
       deliveryOptions.find((option) =>
         deliveryOptionMatches(option, ['cash on delivery']),
       ) ||
-      deliveryOptions.find((option) => Number(option.estimatedCost?.amount) === 60)
+      deliveryOptions.find(
+        (option) => Number(option.estimatedCost?.amount) === 60,
+      )
     );
   }
 
@@ -657,7 +1124,8 @@ function chooseDeliveryOption(
 }
 
 function deliveryOptionMatches(option: any, terms: string[]) {
-  const label = `${option?.title || ''} ${option?.description || ''}`.toLowerCase();
+  const label =
+    `${option?.title || ''} ${option?.description || ''}`.toLowerCase();
   return terms.some((term) => label.includes(term));
 }
 
@@ -691,7 +1159,9 @@ function knownCheckoutProfileToBuyerIdentity(profile: KnownCheckoutProfile) {
 
 function removeEmptyValues<T extends Record<string, unknown>>(record: T) {
   return Object.fromEntries(
-    Object.entries(record).filter(([, value]) => value !== undefined && value !== ''),
+    Object.entries(record).filter(
+      ([, value]) => value !== undefined && value !== '',
+    ),
   );
 }
 

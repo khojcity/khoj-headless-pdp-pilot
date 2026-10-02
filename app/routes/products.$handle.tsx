@@ -219,7 +219,10 @@ export default function Product() {
               addToCartTracking={addToCartTracking}
             />
 
-            <div className="pilot-checkout-notes" aria-label="Checkout benefits">
+            <div
+              className="pilot-checkout-notes"
+              aria-label="Checkout benefits"
+            >
               <span>Cash on delivery available</span>
               <span>Secure Shopify checkout</span>
               <span>Ships across India</span>
@@ -381,7 +384,11 @@ function ProductMedia({media, title}: {media: any[]; title: string}) {
             poster={active.previewImage?.url}
           >
             {active.sources.map((source: any) => (
-              <source key={source.url} src={source.url} type={source.mimeType} />
+              <source
+                key={source.url}
+                src={source.url}
+                type={source.mimeType}
+              />
             ))}
             <track kind="captions" />
           </video>
@@ -483,7 +490,7 @@ function PilotProductForm({
               ? [{merchandiseId: selectedVariant.id, quantity: 1}]
               : []
           }
-          redirectTo="checkout"
+          redirectTo="/cart"
         >
           Buy now
         </AddToCartButton>
@@ -549,8 +556,14 @@ const DEFAULT_PRODUCT_CONTENT: ProductPageContent = {
   details: [
     {label: 'Craft', value: 'Hand-painted, handmade, and handcrafted'},
     {label: 'Includes', value: 'Necklace and matching earrings'},
-    {label: 'Material', value: 'Cardboard, fabric, acrylic paint, and glass beads'},
-    {label: 'Colour', value: 'Black and white base with peacock blue-green accents'},
+    {
+      label: 'Material',
+      value: 'Cardboard, fabric, acrylic paint, and glass beads',
+    },
+    {
+      label: 'Colour',
+      value: 'Black and white base with peacock blue-green accents',
+    },
     {label: 'Weight', value: 'Approx. 50 grams'},
     {label: 'Size', value: 'Approx. 20 x 4 inches'},
     {
@@ -558,7 +571,10 @@ const DEFAULT_PRODUCT_CONTENT: ProductPageContent = {
       value: 'Sarees, kurtis, festive wear, and traditional occasions',
     },
     {label: 'Delivery', value: 'Free delivery across India'},
-    {label: 'Payment', value: 'COD and prepaid options through Shopify checkout'},
+    {
+      label: 'Payment',
+      value: 'COD and prepaid options through Shopify checkout',
+    },
   ],
 };
 
@@ -572,10 +588,11 @@ const GANAPATI_PRODUCT_COPY_BY_HANDLE: Record<string, GanapatiProductCopy> = {
     item: 'earrings',
     accent: 'white and festive Ganesha-inspired detail',
   },
-  'ambikeya-mumbai-cha-ganesha-traditional-multi-color-handmade-necklace-set-hp-np': {
-    name: 'Ambikeya',
-    item: 'necklace set',
-  },
+  'ambikeya-mumbai-cha-ganesha-traditional-multi-color-handmade-necklace-set-hp-np':
+    {
+      name: 'Ambikeya',
+      item: 'necklace set',
+    },
   'mumbai-cha-ganesha-handpainted-necklace-029-khoj-city': {
     name: 'Amod',
     item: 'necklace',
@@ -596,10 +613,11 @@ const GANAPATI_PRODUCT_COPY_BY_HANDLE: Record<string, GanapatiProductCopy> = {
     name: 'Ganapati',
     item: 'necklace',
   },
-  'ganapati-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np': {
-    name: 'Ganapati',
-    item: 'necklace set',
-  },
+  'ganapati-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np':
+    {
+      name: 'Ganapati',
+      item: 'necklace set',
+    },
   'mumbai-cha-ganesha-handpainted-necklace-set-025-khoj-city': {
     name: 'Ganarajya',
     item: 'necklace set',
@@ -620,18 +638,20 @@ const GANAPATI_PRODUCT_COPY_BY_HANDLE: Record<string, GanapatiProductCopy> = {
     name: 'Geet',
     item: 'necklace',
   },
-  'geet-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np': {
-    name: 'Geet',
-    item: 'necklace set',
-  },
+  'geet-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np':
+    {
+      name: 'Geet',
+      item: 'necklace set',
+    },
   'mumbai-cha-ganesha-handpainted-necklace-030-khoj-city': {
     name: 'Lambodar',
     item: 'necklace',
   },
-  'lambodar-mumbai-cha-ganesha-traditional-multi-color-handmade-necklace-set-hp-np': {
-    name: 'Lambodar',
-    item: 'necklace set',
-  },
+  'lambodar-mumbai-cha-ganesha-traditional-multi-color-handmade-necklace-set-hp-np':
+    {
+      name: 'Lambodar',
+      item: 'necklace set',
+    },
   'mumbai-cha-ganesha-handpainted-earrings-051-khoj-city': {
     name: 'Taandav',
     item: 'earrings',
@@ -640,10 +660,11 @@ const GANAPATI_PRODUCT_COPY_BY_HANDLE: Record<string, GanapatiProductCopy> = {
     name: 'Taandav',
     item: 'necklace',
   },
-  'taandav-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np': {
-    name: 'Taandav',
-    item: 'necklace set',
-  },
+  'taandav-mumbai-cha-ganesha-traditional-multi-color-hand-painted-necklace-set-hp-np':
+    {
+      name: 'Taandav',
+      item: 'necklace set',
+    },
   'mumbai-cha-ganesha-handpainted-necklace-set-028-khoj-city': {
     name: 'Multicolour',
     item: 'necklace set',
@@ -692,7 +713,10 @@ const PRODUCT_CONTENT_BY_HANDLE: Record<string, ProductPageContent> = {
         value: 'Sarees, kurtis, festive wear, and traditional occasions',
       },
       {label: 'Delivery', value: 'Free delivery across India'},
-      {label: 'Payment', value: 'COD and prepaid options through Shopify checkout'},
+      {
+        label: 'Payment',
+        value: 'COD and prepaid options through Shopify checkout',
+      },
     ],
   },
   'mumbai-cha-ganesha-handpainted-necklace-032-khoj-city': {
@@ -720,7 +744,10 @@ const PRODUCT_CONTENT_BY_HANDLE: Record<string, ProductPageContent> = {
     details: [
       {label: 'Craft', value: 'Hand-painted, handmade, and handcrafted'},
       {label: 'Includes', value: 'Necklace'},
-      {label: 'Material', value: 'Cardboard, fabric, acrylic paint, and glass beads'},
+      {
+        label: 'Material',
+        value: 'Cardboard, fabric, acrylic paint, and glass beads',
+      },
       {label: 'Colour', value: 'Multicolour Ganesha-inspired artwork'},
       {label: 'Weight', value: 'Approx. 50 grams'},
       {label: 'Size', value: 'Approx. 20 x 4 inches'},
@@ -729,7 +756,10 @@ const PRODUCT_CONTENT_BY_HANDLE: Record<string, ProductPageContent> = {
         value: 'Sarees, kurtis, festive wear, and traditional occasions',
       },
       {label: 'Delivery', value: 'Free delivery across India'},
-      {label: 'Payment', value: 'COD and prepaid options through Shopify checkout'},
+      {
+        label: 'Payment',
+        value: 'COD and prepaid options through Shopify checkout',
+      },
     ],
   },
 };
@@ -783,16 +813,23 @@ function buildGanapatiProductContent({
     details: [
       {label: 'Craft', value: 'Hand-painted, handmade, and handcrafted'},
       {label: 'Includes', value: includes},
-      {label: 'Material', value: 'Cardboard, fabric, acrylic paint, and glass beads'},
+      {
+        label: 'Material',
+        value: 'Cardboard, fabric, acrylic paint, and glass beads',
+      },
       {label: 'Colour', value: artStyle},
       {label: 'Weight', value: 'Approx. 50 grams'},
       {label: 'Size', value: 'Approx. 20 x 4 inches'},
       {
         label: 'Best worn with',
-        value: 'Sarees, kurtis, festive wear, puja looks, and traditional occasions',
+        value:
+          'Sarees, kurtis, festive wear, puja looks, and traditional occasions',
       },
       {label: 'Delivery', value: 'Free delivery across India'},
-      {label: 'Payment', value: 'COD and prepaid options through Shopify checkout'},
+      {
+        label: 'Payment',
+        value: 'COD and prepaid options through Shopify checkout',
+      },
     ],
   };
 }
@@ -825,10 +862,7 @@ function RelatedProducts({recommendations}: {recommendations: Promise<any>}) {
             return (
               <div className="pilot-related-grid">
                 {products.slice(0, 4).map((product: any) => (
-                  <a
-                    href={pilotProductUrl(product.handle)}
-                    key={product.id}
-                  >
+                  <a href={pilotProductUrl(product.handle)} key={product.id}>
                     {product.featuredImage && (
                       <div className="pilot-related-media">
                         <Image
