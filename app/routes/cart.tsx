@@ -30,9 +30,6 @@ const KHOJ_STUCK_SITE_ACTIVITY_HOSTS = [
   'khoj-wa-inbox-ko6t5h22wq-el.a.run.app',
   'khoj-wa-inbox-364232686531.asia-south1.run.app',
 ];
-const META_INITIATE_CHECKOUT_ATTRIBUTE =
-  '_khoj_meta_initiate_checkout_event_id';
-
 function khojSiteActivityEndpoint(endpoint?: string) {
   const rawEndpoint = endpoint || '';
   if (!rawEndpoint) return KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT;
@@ -72,11 +69,6 @@ export async function action({request, context}: Route.ActionArgs) {
       return redirect('/cart?checkoutPreference=required');
     }
 
-    const initiateCheckoutEventId = getInitiateCheckoutEventId(formData);
-    if (!initiateCheckoutEventId) {
-      return redirect('/cart?checkoutEvent=required');
-    }
-
     const checkoutIdentity = checkoutIdentityFromForm(formData);
     if (formData.get('addressFlow') === 'completed' && !checkoutIdentity) {
       return data(
@@ -91,7 +83,6 @@ export async function action({request, context}: Route.ActionArgs) {
         currentCart,
         checkoutPreference,
         checkoutIdentity,
-        initiateCheckoutEventId,
       );
     } else {
       const knownProfile = await loadKnownCheckoutProfile(request, context.env);
@@ -104,7 +95,6 @@ export async function action({request, context}: Route.ActionArgs) {
         currentCart,
         checkoutPreference,
         knownProfile,
-        initiateCheckoutEventId,
       );
     }
     return redirect(preparedCart.checkoutUrl || currentCart.checkoutUrl);
@@ -485,8 +475,8 @@ function AddressCheckoutFlow({
   const [checkoutPreference, setCheckoutPreference] = useState<
     CheckoutPreference | ''
   >('');
-  const [initiateCheckoutEventId] = useState(() =>
-    khojTrackingEventId('initiatecheckout'),
+  const [enrichedCheckoutEventId] = useState(() =>
+    khojTrackingEventId('enrichedcheckout'),
   );
   const [resendSeconds, setResendSeconds] = useState(30);
   const submittedOtp = useRef('');
@@ -515,8 +505,8 @@ function AddressCheckoutFlow({
     if (trackedIdentity.current === identityKey) return;
     trackedIdentity.current = identityKey;
     trackKhojActivity({
-      eventType: 'checkout_started',
-      eventId: initiateCheckoutEventId,
+      eventType: 'enriched_checkout',
+      eventId: enrichedCheckoutEventId,
       items: cartTrackingItems(lines),
       totalPrice: {amount: String(baseTotal), currencyCode: 'INR'},
       customer: deliveryAddressTrackingCustomer(checkoutIdentity),
@@ -524,7 +514,7 @@ function AddressCheckoutFlow({
   }, [
     baseTotal,
     checkoutIdentity,
-    initiateCheckoutEventId,
+    enrichedCheckoutEventId,
     lines,
     step,
   ]);
@@ -765,7 +755,6 @@ function AddressCheckoutFlow({
               address={checkoutIdentity}
               baseTotal={baseTotal}
               checkoutPreference={checkoutPreference}
-              initiateCheckoutEventId={initiateCheckoutEventId}
               onChange={setCheckoutPreference}
             />
           ) : null}
@@ -1030,13 +1019,11 @@ function CheckoutPaymentStep({
   address,
   baseTotal,
   checkoutPreference,
-  initiateCheckoutEventId,
   onChange,
 }: {
   address: DeliveryAddress;
   baseTotal: number;
   checkoutPreference: CheckoutPreference | '';
-  initiateCheckoutEventId: string;
   onChange: (value: CheckoutPreference | '') => void;
 }) {
   return (
@@ -1068,7 +1055,6 @@ function CheckoutPaymentStep({
       <CheckoutForm
         address={address}
         checkoutPreference={checkoutPreference}
-        initiateCheckoutEventId={initiateCheckoutEventId}
         label="Continue to secure checkout"
       />
     </div>
@@ -1078,12 +1064,10 @@ function CheckoutPaymentStep({
 function CheckoutForm({
   address,
   checkoutPreference,
-  initiateCheckoutEventId,
   label,
 }: {
   address: DeliveryAddress;
   checkoutPreference: CheckoutPreference | '';
-  initiateCheckoutEventId: string;
   label: string;
 }) {
   const navigation = useNavigation();
@@ -1119,11 +1103,6 @@ function CheckoutForm({
       onSubmit={() => setHasSubmittedCheckout(true)}
     >
       <input type="hidden" name="_intent" value="prepareCheckout" />
-      <input
-        type="hidden"
-        name="initiateCheckoutEventId"
-        value={initiateCheckoutEventId}
-      />
       <CheckoutIdentityInputs address={address} />
       <input
         type="hidden"
@@ -1389,13 +1368,11 @@ async function prepareCheckoutWithIdentity(
   >,
   checkoutPreference: CheckoutPreference,
   buyerIdentity: Record<string, unknown>,
-  initiateCheckoutEventId: string,
 ) {
   await updateCartCheckoutPreference(
     context,
     currentCart,
     checkoutPreference,
-    initiateCheckoutEventId,
   );
   const result = await context.cart.updateBuyerIdentity(buyerIdentity as any);
   if (!result.cart || result.errors?.length) {
@@ -1512,14 +1489,12 @@ async function prepareKnownVisitorCheckout(
   >,
   checkoutPreference?: CheckoutPreference,
   knownProfile?: KnownCheckoutProfile | null,
-  initiateCheckoutEventId?: string,
 ) {
   const cartWithPreference = checkoutPreference
     ? await updateCartCheckoutPreference(
         context,
         currentCart,
         checkoutPreference,
-        initiateCheckoutEventId,
       )
     : currentCart;
   const profile =
@@ -1559,20 +1534,12 @@ function getCheckoutPreference(formData: FormData): CheckoutPreference | null {
   return value === 'prepaid' || value === 'cod' ? value : null;
 }
 
-function getInitiateCheckoutEventId(formData: FormData) {
-  const value = String(formData.get('initiateCheckoutEventId') || '').trim();
-  return /^sh-initiatecheckout-[A-Za-z0-9_-]{8,96}$/.test(value)
-    ? value
-    : null;
-}
-
 async function updateCartCheckoutPreference(
   context: Route.ActionArgs['context'],
   currentCart: NonNullable<
     Awaited<ReturnType<Route.ActionArgs['context']['cart']['get']>>
   >,
   checkoutPreference: CheckoutPreference,
-  initiateCheckoutEventId?: string,
 ) {
   const result = await context.storefront.mutate(
     CART_ATTRIBUTES_UPDATE_MUTATION,
@@ -1591,14 +1558,6 @@ async function updateCartCheckoutPreference(
                 ? 'Cash on delivery - COD shipping charge ₹60'
                 : 'Prepaid - Free shipping',
           },
-          ...(initiateCheckoutEventId
-            ? [
-                {
-                  key: META_INITIATE_CHECKOUT_ATTRIBUTE,
-                  value: initiateCheckoutEventId,
-                },
-              ]
-            : []),
         ],
       },
     },

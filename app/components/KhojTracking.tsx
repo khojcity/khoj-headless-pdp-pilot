@@ -323,6 +323,13 @@ function trackMetaPixelActivity(event: TrackEvent) {
     fbq('track', 'InitiateCheckout', metaProductParams(event), {
       eventID: event.eventId,
     });
+    return;
+  }
+
+  if (event.eventType === 'enriched_checkout') {
+    fbq('trackCustom', 'EnrichedCheckout', metaProductParams(event), {
+      eventID: event.eventId,
+    });
   }
 }
 
