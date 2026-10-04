@@ -8,11 +8,20 @@ import {
   useFetcher,
   type HeadersFunction,
 } from 'react-router';
-import {useEffect, useRef, useState, type FormEvent} from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
 import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm, Image, Money} from '@shopify/hydrogen';
 import {
+  khojCheckoutJourneyId,
+  khojFunnelEventId,
   khojTrackingEventId,
   trackKhojActivity,
   type TrackCustomer,
@@ -327,6 +336,7 @@ export default function Cart() {
           {addressFlowOpen ? (
             <AddressCheckoutFlow
               baseTotal={summary.subtotal}
+              cartId={cart?.id}
               itemCount={totalQuantity}
               knownProfile={knownProfile}
               lines={lines}
@@ -399,6 +409,20 @@ function CartPageTracking({
       checkoutUrl: cart?.checkoutUrl,
       customer: knownProfileTrackingCustomer(knownProfile),
     });
+    const journeyId = khojCheckoutJourneyId(cart?.id);
+    trackKhojActivity({
+      eventType: 'cart_reached',
+      eventId: khojFunnelEventId(journeyId, 'cart_reached'),
+      items: cartTrackingItems(lines),
+      totalPrice: cart?.cost?.subtotalAmount,
+      checkoutUrl: cart?.checkoutUrl,
+      customer: knownProfileTrackingCustomer(knownProfile),
+      funnel: {
+        journeyId,
+        stage: 'cart_reached',
+        path: knownProfile ? 'known' : 'unknown',
+      },
+    });
   }, [cart, knownProfile, lines]);
   return null;
 }
@@ -444,19 +468,25 @@ function isUsableCheckoutEmail(email?: string) {
 
 function AddressCheckoutFlow({
   baseTotal,
+  cartId,
   itemCount,
   knownProfile,
   lines,
   onClose,
 }: {
   baseTotal: number;
+  cartId?: string;
   itemCount: number;
   knownProfile?: KnownCheckoutProfile | null;
   lines: any[];
   onClose: () => void;
 }) {
   const fetcher = useFetcher<any>();
-  const knownAddress = knownProfileToDeliveryAddress(knownProfile);
+  const [journeyId] = useState(() => khojCheckoutJourneyId(cartId));
+  const knownAddress = useMemo(
+    () => knownProfileToDeliveryAddress(knownProfile),
+    [knownProfile],
+  );
   const [step, setStep] = useState<
     'phone' | 'otp' | 'address' | 'manual' | 'payment'
   >(
@@ -475,28 +505,64 @@ function AddressCheckoutFlow({
   const [checkoutPreference, setCheckoutPreference] = useState<
     CheckoutPreference | ''
   >('');
+  const [checkoutPath, setCheckoutPath] = useState<
+    'unknown' | 'known' | 'shiprocket' | 'manual'
+  >(knownAddress ? 'known' : 'unknown');
   const [enrichedCheckoutEventId] = useState(() =>
     khojTrackingEventId('enrichedcheckout'),
   );
   const [resendSeconds, setResendSeconds] = useState(30);
   const submittedOtp = useRef('');
   const trackedIdentity = useRef('');
+  const trackedStages = useRef(new Set<string>());
+  const trackFunnelStage = useCallback(
+    (
+      stage:
+        | 'phone_submitted'
+        | 'otp_verified'
+        | 'address_ready'
+        | 'checkout_handoff',
+      path: 'unknown' | 'known' | 'shiprocket' | 'manual',
+      customer?: DeliveryAddress | null,
+    ) => {
+      const key = `${stage}|${path}`;
+      if (trackedStages.current.has(key)) return;
+      trackedStages.current.add(key);
+      trackKhojActivity({
+        eventType: stage,
+        eventId: khojFunnelEventId(journeyId, stage),
+        items: cartTrackingItems(lines),
+        totalPrice: {amount: String(baseTotal), currencyCode: 'INR'},
+        customer: customer
+          ? deliveryAddressTrackingCustomer(customer)
+          : undefined,
+        funnel: {journeyId, stage, path},
+      });
+    },
+    [baseTotal, journeyId, lines],
+  );
   useEffect(() => {
     if (fetcher.data?.loginToken) {
+      trackFunnelStage('phone_submitted', 'shiprocket', {phone});
       setLoginToken(fetcher.data.loginToken);
       setStep('otp');
       setResendSeconds(30);
     }
     if (fetcher.data?.addresses) {
-      setAddress(
-        fetcher.data.addresses[0] || {
+      const fetchedAddress = fetcher.data.addresses[0] || {
           phone: fetcher.data.phone || '',
           email: fetcher.data.resolvedEmail || '',
-        },
-      );
+        };
+      trackFunnelStage('otp_verified', 'shiprocket', fetchedAddress);
+      setCheckoutPath(fetcher.data.addresses.length ? 'shiprocket' : 'manual');
+      setAddress(fetchedAddress);
       setStep(fetcher.data.addresses.length ? 'address' : 'manual');
     }
-  }, [fetcher.data]);
+  }, [fetcher.data, phone, trackFunnelStage]);
+  useEffect(() => {
+    if (!knownAddress) return;
+    trackFunnelStage('address_ready', 'known', knownAddress);
+  }, [knownAddress, trackFunnelStage]);
   const busy = fetcher.state !== 'idle';
   const error = fetcher.data?.error;
   useEffect(() => {
@@ -731,8 +797,13 @@ function AddressCheckoutFlow({
           {step === 'address' && address ? (
             <CheckoutIdentityForm
               address={address}
-              onManual={() => setStep('manual')}
+              onManual={() => {
+                setCheckoutPath('manual');
+                setStep('manual');
+              }}
               onContinue={(identity) => {
+                setCheckoutPath('shiprocket');
+                trackFunnelStage('address_ready', 'shiprocket', identity);
                 setCheckoutIdentity(identity);
                 setStep('payment');
               }}
@@ -744,6 +815,8 @@ function AddressCheckoutFlow({
               manual
               onManual={() => setStep(address ? 'address' : 'phone')}
               onContinue={(identity) => {
+                setCheckoutPath('manual');
+                trackFunnelStage('address_ready', 'manual', identity);
                 setAddress(identity);
                 setCheckoutIdentity(identity);
                 setStep('payment');
@@ -756,6 +829,13 @@ function AddressCheckoutFlow({
               baseTotal={baseTotal}
               checkoutPreference={checkoutPreference}
               onChange={setCheckoutPreference}
+              onCheckoutHandoff={() =>
+                trackFunnelStage(
+                  'checkout_handoff',
+                  checkoutPath,
+                  checkoutIdentity,
+                )
+              }
             />
           ) : null}
           <footer className="pilot-address-footer">
@@ -1020,11 +1100,13 @@ function CheckoutPaymentStep({
   baseTotal,
   checkoutPreference,
   onChange,
+  onCheckoutHandoff,
 }: {
   address: DeliveryAddress;
   baseTotal: number;
   checkoutPreference: CheckoutPreference | '';
   onChange: (value: CheckoutPreference | '') => void;
+  onCheckoutHandoff: () => void;
 }) {
   return (
     <div className="pilot-payment-step">
@@ -1056,6 +1138,7 @@ function CheckoutPaymentStep({
         address={address}
         checkoutPreference={checkoutPreference}
         label="Continue to secure checkout"
+        onCheckoutHandoff={onCheckoutHandoff}
       />
     </div>
   );
@@ -1065,10 +1148,12 @@ function CheckoutForm({
   address,
   checkoutPreference,
   label,
+  onCheckoutHandoff,
 }: {
   address: DeliveryAddress;
   checkoutPreference: CheckoutPreference | '';
   label: string;
+  onCheckoutHandoff: () => void;
 }) {
   const navigation = useNavigation();
   const [hasSubmittedCheckout, setHasSubmittedCheckout] = useState(false);
@@ -1100,7 +1185,10 @@ function CheckoutForm({
     <Form
       method="post"
       className="pilot-checkout-form"
-      onSubmit={() => setHasSubmittedCheckout(true)}
+      onSubmit={() => {
+        onCheckoutHandoff();
+        setHasSubmittedCheckout(true);
+      }}
     >
       <input type="hidden" name="_intent" value="prepareCheckout" />
       <CheckoutIdentityInputs address={address} />

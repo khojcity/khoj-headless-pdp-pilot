@@ -53,6 +53,11 @@ export type TrackEvent = {
   totalPrice?: Money | null;
   checkoutUrl?: string;
   customer?: TrackCustomer;
+  funnel?: {
+    journeyId: string;
+    stage: string;
+    path?: 'unknown' | 'known' | 'shiprocket' | 'manual';
+  };
 };
 
 type MetaPixel = {
@@ -79,6 +84,23 @@ function randomId() {
 
 export function khojTrackingEventId(prefix: string) {
   return `sh-${prefix}-${randomId()}`
+    .replace(/[^A-Za-z0-9_-]/g, '-')
+    .slice(0, 120);
+}
+
+export function khojCheckoutJourneyId(cartId?: string) {
+  const cartKey = String(cartId || 'empty').split('/').pop() || 'empty';
+  const storageKey = `khoj_checkout_journey_${cartKey}`;
+  if (typeof window === 'undefined') return `server-${cartKey}`;
+  const existing = window.sessionStorage.getItem(storageKey);
+  if (existing) return existing;
+  const journeyId = randomId().replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 80);
+  window.sessionStorage.setItem(storageKey, journeyId);
+  return journeyId;
+}
+
+export function khojFunnelEventId(journeyId: string, stage: string) {
+  return `sh-funnel-${journeyId}-${stage}`
     .replace(/[^A-Za-z0-9_-]/g, '-')
     .slice(0, 120);
 }
@@ -330,6 +352,23 @@ function trackMetaPixelActivity(event: TrackEvent) {
     fbq('trackCustom', 'EnrichedCheckout', metaProductParams(event), {
       eventID: event.eventId,
     });
+    return;
+  }
+
+  const funnelEventNames: Record<string, string> = {
+    cart_reached: 'CartReached',
+    phone_submitted: 'PhoneSubmitted',
+    otp_verified: 'OtpVerified',
+    address_ready: 'AddressReady',
+    checkout_handoff: 'CheckoutHandoff',
+  };
+  const funnelEventName = funnelEventNames[event.eventType];
+  if (funnelEventName) {
+    fbq('trackCustom', funnelEventName, {
+      ...metaProductParams(event),
+      funnel_stage: event.funnel?.stage,
+      funnel_path: event.funnel?.path,
+    }, {eventID: event.eventId});
   }
 }
 
@@ -370,6 +409,17 @@ function trackGoogleActivity(event: TrackEvent) {
   if (event.eventType === 'checkout_started') {
     gtag('event', 'begin_checkout', {
       ...googleEcommerceParams(event),
+      send_to: googleDestinationIds(),
+      transport_type: 'beacon',
+    });
+    return;
+  }
+
+  if (event.funnel) {
+    gtag('event', event.eventType, {
+      ...googleEcommerceParams(event),
+      funnel_stage: event.funnel.stage,
+      funnel_path: event.funnel.path,
       send_to: googleDestinationIds(),
       transport_type: 'beacon',
     });
@@ -448,6 +498,13 @@ export function trackKhojActivity(event: TrackEvent) {
     total_price: event.totalPrice?.amount,
     currency: event.totalPrice?.currencyCode || 'INR',
     checkout_url: event.checkoutUrl,
+    funnel: event.funnel
+      ? {
+          journey_id: event.funnel.journeyId,
+          stage: event.funnel.stage,
+          path: event.funnel.path || 'unknown',
+        }
+      : undefined,
   };
 
   fetch(endpoint, {
