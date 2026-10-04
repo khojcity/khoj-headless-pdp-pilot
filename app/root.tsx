@@ -18,19 +18,11 @@ import {PilotShell} from '~/components/PilotShell';
 
 export type RootLoader = typeof loader;
 
-const KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT =
-  'https://khoj-wa-inbox-capi-test-ko6t5h22wq-el.a.run.app/api/shopify/site-activity';
-const KHOJ_STUCK_SITE_ACTIVITY_HOSTS = [
-  'khoj-wa-inbox-ko6t5h22wq-el.a.run.app',
-  'khoj-wa-inbox-364232686531.asia-south1.run.app',
-];
+const KHOJ_DEFAULT_SITE_ACTIVITY_ENDPOINT =
+  'https://khoj-wa-inbox-ko6t5h22wq-el.a.run.app/api/shopify/site-activity';
 
 function khojSiteActivityEndpoint(endpoint?: string) {
-  const rawEndpoint = endpoint || '';
-  if (!rawEndpoint) return KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT;
-  return KHOJ_STUCK_SITE_ACTIVITY_HOSTS.some((host) => rawEndpoint.includes(host))
-    ? KHOJ_WORKING_SITE_ACTIVITY_ENDPOINT
-    : rawEndpoint;
+  return endpoint?.trim() || KHOJ_DEFAULT_SITE_ACTIVITY_ENDPOINT;
 }
 
 /**
