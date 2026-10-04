@@ -20,6 +20,7 @@ import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm, Image, Money} from '@shopify/hydrogen';
 import {
+  completeKhojCheckoutJourney,
   khojCheckoutJourneyId,
   khojFunnelEventId,
   khojTrackingEventId,
@@ -74,6 +75,8 @@ export async function action({request, context}: Route.ActionArgs) {
     }
 
     const checkoutPreference = getCheckoutPreference(formData);
+    const journeyId = String(formData.get('journeyId') || '').slice(0, 80);
+    const checkoutPath = getCheckoutPath(formData);
     if (!checkoutPreference) {
       return redirect('/cart?checkoutPreference=required');
     }
@@ -92,6 +95,8 @@ export async function action({request, context}: Route.ActionArgs) {
         currentCart,
         checkoutPreference,
         checkoutIdentity,
+        journeyId,
+        checkoutPath,
       );
     } else {
       const knownProfile = await loadKnownCheckoutProfile(request, context.env);
@@ -104,6 +109,8 @@ export async function action({request, context}: Route.ActionArgs) {
         currentCart,
         checkoutPreference,
         knownProfile,
+        journeyId,
+        checkoutPath,
       );
     }
     return redirect(preparedCart.checkoutUrl || currentCart.checkoutUrl);
@@ -828,6 +835,8 @@ function AddressCheckoutFlow({
               address={checkoutIdentity}
               baseTotal={baseTotal}
               checkoutPreference={checkoutPreference}
+              journeyId={journeyId}
+              checkoutPath={checkoutPath}
               onChange={setCheckoutPreference}
               onCheckoutHandoff={() =>
                 trackFunnelStage(
@@ -1075,6 +1084,8 @@ function deliveryAddressTrackingCustomer(
     province: address.state,
     country: address.country || 'IN',
     zip: address.pincode,
+    address1: address.line1,
+    address2: address.line2,
   };
 }
 
@@ -1099,12 +1110,16 @@ function CheckoutPaymentStep({
   address,
   baseTotal,
   checkoutPreference,
+  journeyId,
+  checkoutPath,
   onChange,
   onCheckoutHandoff,
 }: {
   address: DeliveryAddress;
   baseTotal: number;
   checkoutPreference: CheckoutPreference | '';
+  journeyId: string;
+  checkoutPath: 'unknown' | 'known' | 'shiprocket' | 'manual';
   onChange: (value: CheckoutPreference | '') => void;
   onCheckoutHandoff: () => void;
 }) {
@@ -1137,6 +1152,8 @@ function CheckoutPaymentStep({
       <CheckoutForm
         address={address}
         checkoutPreference={checkoutPreference}
+        journeyId={journeyId}
+        checkoutPath={checkoutPath}
         label="Continue to secure checkout"
         onCheckoutHandoff={onCheckoutHandoff}
       />
@@ -1147,11 +1164,15 @@ function CheckoutPaymentStep({
 function CheckoutForm({
   address,
   checkoutPreference,
+  journeyId,
+  checkoutPath,
   label,
   onCheckoutHandoff,
 }: {
   address: DeliveryAddress;
   checkoutPreference: CheckoutPreference | '';
+  journeyId: string;
+  checkoutPath: 'unknown' | 'known' | 'shiprocket' | 'manual';
   label: string;
   onCheckoutHandoff: () => void;
 }) {
@@ -1187,6 +1208,7 @@ function CheckoutForm({
       className="pilot-checkout-form"
       onSubmit={() => {
         onCheckoutHandoff();
+        completeKhojCheckoutJourney(journeyId);
         setHasSubmittedCheckout(true);
       }}
     >
@@ -1197,6 +1219,8 @@ function CheckoutForm({
         name="checkoutPreference"
         value={checkoutPreference}
       />
+      <input type="hidden" name="journeyId" value={journeyId} />
+      <input type="hidden" name="checkoutPath" value={checkoutPath} />
       <button
         className="pilot-button pilot-button-primary"
         disabled={!checkoutPreference || isPreparingCheckout}
@@ -1456,11 +1480,15 @@ async function prepareCheckoutWithIdentity(
   >,
   checkoutPreference: CheckoutPreference,
   buyerIdentity: Record<string, unknown>,
+  journeyId: string,
+  checkoutPath: CheckoutPath,
 ) {
   await updateCartCheckoutPreference(
     context,
     currentCart,
     checkoutPreference,
+    journeyId,
+    checkoutPath,
   );
   const result = await context.cart.updateBuyerIdentity(buyerIdentity as any);
   if (!result.cart || result.errors?.length) {
@@ -1577,12 +1605,16 @@ async function prepareKnownVisitorCheckout(
   >,
   checkoutPreference?: CheckoutPreference,
   knownProfile?: KnownCheckoutProfile | null,
+  journeyId = '',
+  checkoutPath: CheckoutPath = 'known',
 ) {
   const cartWithPreference = checkoutPreference
     ? await updateCartCheckoutPreference(
         context,
         currentCart,
         checkoutPreference,
+        journeyId,
+        checkoutPath,
       )
     : currentCart;
   const profile =
@@ -1615,11 +1647,19 @@ async function prepareKnownVisitorCheckout(
 }
 
 type CheckoutPreference = 'prepaid' | 'cod';
+type CheckoutPath = 'unknown' | 'known' | 'shiprocket' | 'manual';
 type CheckoutCart = {id: string; checkoutUrl?: string | null};
 
 function getCheckoutPreference(formData: FormData): CheckoutPreference | null {
   const value = String(formData.get('checkoutPreference') || '');
   return value === 'prepaid' || value === 'cod' ? value : null;
+}
+
+function getCheckoutPath(formData: FormData): CheckoutPath {
+  const value = String(formData.get('checkoutPath') || 'unknown');
+  return value === 'known' || value === 'shiprocket' || value === 'manual'
+    ? value
+    : 'unknown';
 }
 
 async function updateCartCheckoutPreference(
@@ -1628,6 +1668,8 @@ async function updateCartCheckoutPreference(
     Awaited<ReturnType<Route.ActionArgs['context']['cart']['get']>>
   >,
   checkoutPreference: CheckoutPreference,
+  journeyId = '',
+  checkoutPath: CheckoutPath = 'unknown',
 ) {
   const result = await context.storefront.mutate(
     CART_ATTRIBUTES_UPDATE_MUTATION,
@@ -1639,6 +1681,10 @@ async function updateCartCheckoutPreference(
             key: 'checkout_payment_preference',
             value: checkoutPreference,
           },
+          ...(journeyId
+            ? [{key: '_khoj_journey_id', value: journeyId}]
+            : []),
+          {key: '_khoj_checkout_path', value: checkoutPath},
           {
             key: 'checkout_shipping_label',
             value:

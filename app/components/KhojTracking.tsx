@@ -13,6 +13,7 @@ const META_PIXEL_SCRIPT_SRC = 'https://connect.facebook.net/en_US/fbevents.js';
 const GOOGLE_TAG_SCRIPT_SRC = 'https://www.googletagmanager.com/gtag/js';
 const GOOGLE_DATA_LAYER = 'khojGoogleDataLayer';
 const META_COOKIE_SUBDOMAIN_INDEX = '1';
+const ACTIVE_JOURNEY_KEY = 'khoj_checkout_journey_active';
 
 type Money = {
   amount: string;
@@ -43,6 +44,8 @@ export type TrackCustomer = {
   province?: string;
   country?: string;
   zip?: string;
+  address1?: string;
+  address2?: string;
 };
 
 export type TrackEvent = {
@@ -94,7 +97,10 @@ export function khojCheckoutJourneyId(cartId?: string) {
   if (typeof window === 'undefined') return `server-${cartKey}`;
   const existing = window.sessionStorage.getItem(storageKey);
   if (existing) return existing;
-  const journeyId = randomId().replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 80);
+  const journeyId =
+    window.sessionStorage.getItem(ACTIVE_JOURNEY_KEY) ||
+    randomId().replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 80);
+  window.sessionStorage.setItem(ACTIVE_JOURNEY_KEY, journeyId);
   window.sessionStorage.setItem(storageKey, journeyId);
   return journeyId;
 }
@@ -103,6 +109,13 @@ export function khojFunnelEventId(journeyId: string, stage: string) {
   return `sh-funnel-${journeyId}-${stage}`
     .replace(/[^A-Za-z0-9_-]/g, '-')
     .slice(0, 120);
+}
+
+export function completeKhojCheckoutJourney(journeyId: string) {
+  if (typeof window === 'undefined') return;
+  if (window.sessionStorage.getItem(ACTIVE_JOURNEY_KEY) === journeyId) {
+    window.sessionStorage.removeItem(ACTIVE_JOURNEY_KEY);
+  }
 }
 
 function readCookie(name: string) {
@@ -473,6 +486,8 @@ export function trackKhojActivity(event: TrackEvent) {
       province: event.customer?.province,
       country: event.customer?.country,
       zip: event.customer?.zip,
+      address1: event.customer?.address1,
+      address2: event.customer?.address2,
     }),
     buyerIdentity: cleanParams({
       email: event.customer?.email,
@@ -490,6 +505,8 @@ export function trackKhojActivity(event: TrackEvent) {
             country: event.customer.country,
             zip: event.customer.zip,
             phone: event.customer.phone,
+            address1: event.customer.address1,
+            address2: event.customer.address2,
           }),
         }
       : undefined,
@@ -518,6 +535,7 @@ export function trackKhojActivity(event: TrackEvent) {
 
 export function KhojPageTracking({product}: {product: TrackProduct}) {
   useEffect(() => {
+    const journeyId = khojCheckoutJourneyId();
     trackKhojActivity({
       eventType: 'page_viewed',
       eventId: khojTrackingEventId('page'),
@@ -526,6 +544,11 @@ export function KhojPageTracking({product}: {product: TrackProduct}) {
       eventType: 'product_viewed',
       eventId: khojTrackingEventId('viewcontent'),
       product,
+      funnel: {
+        journeyId,
+        stage: 'content_viewed',
+        path: 'unknown',
+      },
     });
   }, [product]);
 
