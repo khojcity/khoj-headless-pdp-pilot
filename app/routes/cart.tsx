@@ -8,14 +8,7 @@ import {
   useFetcher,
   type HeadersFunction,
 } from 'react-router';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {Route} from './+types/cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm, Image, Money} from '@shopify/hydrogen';
@@ -75,7 +68,7 @@ export async function action({request, context}: Route.ActionArgs) {
     const checkoutIdentity = checkoutIdentityFromForm(formData);
     if (formData.get('addressFlow') === 'completed' && !checkoutIdentity) {
       return data(
-        {error: 'Enter a valid email and complete delivery address.'},
+        {error: 'Could not prepare the saved delivery address.'},
         {status: 400},
       );
     }
@@ -91,9 +84,6 @@ export async function action({request, context}: Route.ActionArgs) {
       );
     } else {
       const knownProfile = await loadKnownCheckoutProfile(request, context.env);
-      if (!isCompleteKnownCheckoutProfile(knownProfile)) {
-        return redirect('/cart?address=required');
-      }
       preparedCart = await prepareKnownVisitorCheckout(
         request,
         context,
@@ -456,14 +446,6 @@ type DeliveryAddress = {
   email?: string;
 };
 
-type ManualAddressReason =
-  | 'before_otp'
-  | 'during_otp'
-  | 'no_saved_address'
-  | 'different_address'
-  | 'known_profile_incomplete'
-  | 'shiprocket_error';
-
 function isUsableCheckoutEmail(email?: string) {
   const normalized = String(email || '').trim();
   return (
@@ -493,19 +475,13 @@ function AddressCheckoutFlow({
     () => knownProfileToDeliveryAddress(knownProfile),
     [knownProfile],
   );
-  const [step, setStep] = useState<
-    'phone' | 'otp' | 'address' | 'manual' | 'payment'
-  >(
-    knownAddress
-      ? isUsableCheckoutEmail(knownAddress.email)
-        ? 'payment'
-        : 'address'
-      : 'phone',
+  const knownAddressComplete = hasCompleteDeliveryAddress(knownAddress);
+  const [step, setStep] = useState<'phone' | 'otp' | 'payment'>(
+    knownAddress ? 'payment' : 'phone',
   );
   const [phone, setPhone] = useState(knownAddress?.phone || '');
   const [otp, setOtp] = useState('');
   const [loginToken, setLoginToken] = useState('');
-  const [address, setAddress] = useState<DeliveryAddress | null>(knownAddress);
   const [checkoutIdentity, setCheckoutIdentity] =
     useState<DeliveryAddress | null>(knownAddress);
   const [checkoutPreference, setCheckoutPreference] = useState<
@@ -513,9 +489,7 @@ function AddressCheckoutFlow({
   >('');
   const [checkoutPath, setCheckoutPath] = useState<
     'unknown' | 'known' | 'shiprocket' | 'manual'
-  >(knownAddress ? 'known' : 'unknown');
-  const [manualAddressReason, setManualAddressReason] =
-    useState<ManualAddressReason | null>(null);
+  >(knownAddressComplete ? 'known' : 'unknown');
   const [enrichedCheckoutEventId] = useState(() =>
     khojTrackingEventId('enrichedcheckout'),
   );
@@ -532,7 +506,6 @@ function AddressCheckoutFlow({
         | 'checkout_handoff',
       path: 'unknown' | 'known' | 'shiprocket' | 'manual',
       customer?: DeliveryAddress | null,
-      manualReason?: ManualAddressReason | null,
     ) => {
       const key = `${stage}|${path}`;
       if (trackedStages.current.has(key)) return;
@@ -549,7 +522,6 @@ function AddressCheckoutFlow({
           journeyId,
           stage,
           path,
-          manualReason: manualReason || undefined,
         },
       });
     },
@@ -564,21 +536,32 @@ function AddressCheckoutFlow({
     }
     if (fetcher.data?.addresses) {
       const fetchedAddress = fetcher.data.addresses[0] || {
-          phone: fetcher.data.phone || '',
-          email: fetcher.data.resolvedEmail || '',
-        };
+        phone: fetcher.data.phone || '',
+        email: fetcher.data.resolvedEmail || '',
+      };
       trackFunnelStage('otp_verified', 'shiprocket', fetchedAddress);
-      const hasSavedAddress = fetcher.data.addresses.length > 0;
-      setCheckoutPath(hasSavedAddress ? 'shiprocket' : 'manual');
-      setManualAddressReason(hasSavedAddress ? null : 'no_saved_address');
-      setAddress(fetchedAddress);
-      setStep(hasSavedAddress ? 'address' : 'manual');
+      const hasSavedAddress = hasCompleteDeliveryAddress(fetchedAddress);
+      setCheckoutPath(hasSavedAddress ? 'shiprocket' : 'unknown');
+      setCheckoutIdentity(fetchedAddress);
+      if (hasSavedAddress) {
+        trackFunnelStage('address_ready', 'shiprocket', fetchedAddress);
+      }
+      setStep('payment');
+    }
+    if (fetcher.data?.fallbackToShopify) {
+      const fallbackIdentity = {
+        phone: fetcher.data.phone || phone,
+        email: fetcher.data.resolvedEmail || '',
+      };
+      setCheckoutPath('unknown');
+      setCheckoutIdentity(fallbackIdentity);
+      setStep('payment');
     }
   }, [fetcher.data, phone, trackFunnelStage]);
   useEffect(() => {
-    if (!knownAddress) return;
+    if (!knownAddressComplete || !knownAddress) return;
     trackFunnelStage('address_ready', 'known', knownAddress);
-  }, [knownAddress, trackFunnelStage]);
+  }, [knownAddress, knownAddressComplete, trackFunnelStage]);
   const busy = fetcher.state !== 'idle';
   const error = fetcher.data?.error;
   useEffect(() => {
@@ -593,13 +576,7 @@ function AddressCheckoutFlow({
       totalPrice: {amount: String(baseTotal), currencyCode: 'INR'},
       customer: deliveryAddressTrackingCustomer(checkoutIdentity),
     });
-  }, [
-    baseTotal,
-    checkoutIdentity,
-    enrichedCheckoutEventId,
-    lines,
-    step,
-  ]);
+  }, [baseTotal, checkoutIdentity, enrichedCheckoutEventId, lines, step]);
   useEffect(() => {
     if (step !== 'otp' || resendSeconds <= 0) return;
     const timer = window.setTimeout(
@@ -632,12 +609,8 @@ function AddressCheckoutFlow({
       setStep('phone');
       return;
     }
-    if (step === 'manual' && address) {
-      setStep('address');
-      return;
-    }
     if (step === 'payment') {
-      setStep(address ? 'address' : 'manual');
+      setStep(knownAddress ? 'phone' : loginToken ? 'otp' : 'phone');
       return;
     }
     setStep('phone');
@@ -713,30 +686,15 @@ function AddressCheckoutFlow({
                 </span>
               </label>
               <label className="pilot-address-consent">
-                <input name="consent" required type="checkbox" />I consent to
-                retrieving my saved delivery addresses for this checkout.
+                <input defaultChecked name="consent" required type="checkbox" />
+                I consent to retrieving my saved delivery addresses for this
+                checkout.
               </label>
               <button
                 className="pilot-button pilot-button-primary"
                 disabled={busy || phone.length !== 10}
               >
                 Send OTP
-              </button>
-              <button
-                className="pilot-address-secondary"
-                onClick={() => {
-                  setManualAddressReason(
-                    error
-                      ? 'shiprocket_error'
-                      : knownProfile && !knownAddress
-                        ? 'known_profile_incomplete'
-                        : 'before_otp',
-                  );
-                  setStep('manual');
-                }}
-                type="button"
-              >
-                Enter address manually
               </button>
             </fetcher.Form>
           ) : null}
@@ -810,54 +768,7 @@ function AddressCheckoutFlow({
                   ? `Resend OTP in ${resendSeconds}s`
                   : 'Resend OTP'}
               </button>
-              <button
-                className="pilot-address-secondary"
-                onClick={() => {
-                  setManualAddressReason(
-                    error ? 'shiprocket_error' : 'during_otp',
-                  );
-                  setStep('manual');
-                }}
-                type="button"
-              >
-                Enter address manually
-              </button>
             </fetcher.Form>
-          ) : null}
-          {step === 'address' && address ? (
-            <CheckoutIdentityForm
-              address={address}
-              onManual={() => {
-                setCheckoutPath('manual');
-                setManualAddressReason('different_address');
-                setStep('manual');
-              }}
-              onContinue={(identity) => {
-                setCheckoutPath('shiprocket');
-                trackFunnelStage('address_ready', 'shiprocket', identity);
-                setCheckoutIdentity(identity);
-                setStep('payment');
-              }}
-            />
-          ) : null}
-          {step === 'manual' ? (
-            <CheckoutIdentityForm
-              address={address || {phone}}
-              manual
-              onManual={() => setStep(address ? 'address' : 'phone')}
-              onContinue={(identity) => {
-                setCheckoutPath('manual');
-                trackFunnelStage(
-                  'address_ready',
-                  'manual',
-                  identity,
-                  manualAddressReason || 'before_otp',
-                );
-                setAddress(identity);
-                setCheckoutIdentity(identity);
-                setStep('payment');
-              }}
-            />
           ) : null}
           {step === 'payment' && checkoutIdentity ? (
             <CheckoutPaymentStep
@@ -895,198 +806,10 @@ function AddressCheckoutFlow({
   );
 }
 
-function CheckoutIdentityForm({
-  address,
-  manual = false,
-  onManual,
-  onContinue,
-}: {
-  address: DeliveryAddress;
-  manual?: boolean;
-  onManual: () => void;
-  onContinue: (identity: DeliveryAddress) => void;
-}) {
-  const hasUsableEmail = isUsableCheckoutEmail(address.email);
-  const continueWithAddress = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const value = (name: string) => String(formData.get(name) || '').trim();
-    onContinue({
-      first_name: value('firstName'),
-      last_name: value('lastName'),
-      line1: value('address1'),
-      line2: value('address2'),
-      city: value('city'),
-      state: value('province'),
-      pincode: value('zip'),
-      country: 'India',
-      phone: value('phone'),
-      email: value('email'),
-    });
-  };
-  if (!manual) {
-    return (
-      <form className="pilot-address-form" onSubmit={continueWithAddress}>
-        <input
-          name="firstName"
-          type="hidden"
-          value={address.first_name || ''}
-        />
-        <input name="lastName" type="hidden" value={address.last_name || ''} />
-        <input name="address1" type="hidden" value={address.line1 || ''} />
-        <input name="address2" type="hidden" value={address.line2 || ''} />
-        <input name="zip" type="hidden" value={address.pincode || ''} />
-        <input name="city" type="hidden" value={address.city || ''} />
-        <input name="province" type="hidden" value={address.state || ''} />
-        <input name="phone" type="hidden" value={address.phone || ''} />
-        {hasUsableEmail ? (
-          <input name="email" type="hidden" value={address.email} />
-        ) : null}
-        <p className="pilot-kicker">Saved address found</p>
-        <h2>Confirm delivery details</h2>
-        <section className="pilot-saved-address">
-          <div className="pilot-saved-address-heading">
-            <strong>
-              {[address.first_name, address.last_name]
-                .filter(Boolean)
-                .join(' ')}
-            </strong>
-            <button onClick={onManual} type="button">
-              Change
-            </button>
-          </div>
-          <p>
-            {[
-              address.line1,
-              address.line2,
-              address.city,
-              address.state,
-              address.pincode,
-            ]
-              .filter(Boolean)
-              .join(', ')}
-          </p>
-          <span>{address.phone}</span>
-        </section>
-        {hasUsableEmail ? (
-          <p className="pilot-address-email-confirmed">
-            Order updates will be sent to {address.email}.
-          </p>
-        ) : (
-          <div className="pilot-address-email-capture">
-            <p>
-              Email is required for order confirmation and delivery updates.
-            </p>
-            <label>
-              Email address
-              <input
-                autoComplete="email"
-                inputMode="email"
-                name="email"
-                required
-                type="email"
-              />
-            </label>
-          </div>
-        )}
-        <button className="pilot-button pilot-button-primary" type="submit">
-          Continue to payment options
-        </button>
-      </form>
-    );
-  }
-  return (
-    <form className="pilot-address-form" onSubmit={continueWithAddress}>
-      <p className="pilot-kicker">
-        {manual ? 'Manual delivery address' : 'Saved address found'}
-      </p>
-      <h2>
-        {manual ? 'Where should we deliver?' : 'Confirm delivery details'}
-      </h2>
-      <p>
-        {hasUsableEmail
-          ? `Order updates will be sent to ${address.email}.`
-          : 'Email is required for order confirmation and delivery updates.'}
-      </p>
-      <div className="pilot-address-grid">
-        {hasUsableEmail ? (
-          <input name="email" type="hidden" value={address.email} />
-        ) : (
-          <label className="wide">
-            Email address
-            <input
-              autoComplete="email"
-              inputMode="email"
-              name="email"
-              required
-              type="email"
-            />
-          </label>
-        )}
-        <label>
-          First name
-          <input
-            defaultValue={address.first_name || ''}
-            name="firstName"
-            required
-          />
-        </label>
-        <label>
-          Last name
-          <input
-            defaultValue={address.last_name || ''}
-            name="lastName"
-            required
-          />
-        </label>
-        <label className="wide">
-          House number and street
-          <input defaultValue={address.line1 || ''} name="address1" required />
-        </label>
-        <label className="wide">
-          Area and landmark
-          <input defaultValue={address.line2 || ''} name="address2" />
-        </label>
-        <label>
-          Pincode
-          <input
-            defaultValue={address.pincode || ''}
-            name="zip"
-            inputMode="numeric"
-            required
-          />
-        </label>
-        <label>
-          City
-          <input defaultValue={address.city || ''} name="city" required />
-        </label>
-        <label>
-          State
-          <input defaultValue={address.state || ''} name="province" required />
-        </label>
-        <label>
-          Mobile
-          <input defaultValue={address.phone || ''} name="phone" required />
-        </label>
-      </div>
-      <button className="pilot-button pilot-button-primary" type="submit">
-        Continue to payment options
-      </button>
-      <button
-        className="pilot-address-secondary"
-        onClick={onManual}
-        type="button"
-      >
-        {manual ? 'Use saved address' : 'Enter a different address'}
-      </button>
-    </form>
-  );
-}
-
 function knownProfileToDeliveryAddress(
   profile?: KnownCheckoutProfile | null,
 ): DeliveryAddress | null {
-  if (!profile || !hasCompleteKnownCheckoutAddress(profile)) return null;
+  if (!profile) return null;
   return {
     first_name: profile.address?.firstName,
     last_name: profile.address?.lastName,
@@ -1099,6 +822,18 @@ function knownProfileToDeliveryAddress(
     phone: profile.address?.phone || profile.phone,
     email: profile.email,
   };
+}
+
+function hasCompleteDeliveryAddress(address?: DeliveryAddress | null) {
+  return Boolean(
+    address?.first_name &&
+    address.last_name &&
+    address.line1 &&
+    address.city &&
+    address.state &&
+    /^\d{6}$/.test(String(address.pincode || '')) &&
+    String(address.phone || '').replace(/\D/g, '').length >= 10,
+  );
 }
 
 function deliveryAddressTrackingCustomer(
@@ -1119,9 +854,14 @@ function deliveryAddressTrackingCustomer(
 }
 
 function CheckoutIdentityInputs({address}: {address: DeliveryAddress}) {
+  const addressComplete = hasCompleteDeliveryAddress(address);
   return (
     <>
-      <input name="addressFlow" type="hidden" value="completed" />
+      <input
+        name="addressFlow"
+        type="hidden"
+        value={addressComplete ? 'completed' : 'shopify_collect'}
+      />
       <input name="email" type="hidden" value={address.email || ''} />
       <input name="firstName" type="hidden" value={address.first_name || ''} />
       <input name="lastName" type="hidden" value={address.last_name || ''} />
@@ -1154,18 +894,28 @@ function CheckoutPaymentStep({
 }) {
   return (
     <div className="pilot-payment-step">
-      <p className="pilot-kicker">Delivery details confirmed</p>
+      <p className="pilot-kicker">
+        {hasCompleteDeliveryAddress(address)
+          ? 'Delivery details ready'
+          : 'Secure checkout'}
+      </p>
       <h2>Choose payment method</h2>
-      <section className="pilot-payment-address-summary">
-        <strong>
-          {[address.first_name, address.last_name].filter(Boolean).join(' ')}
-        </strong>
-        <span>
-          {[address.city, address.state, address.pincode]
-            .filter(Boolean)
-            .join(', ')}
-        </span>
-      </section>
+      {hasCompleteDeliveryAddress(address) ? (
+        <section className="pilot-payment-address-summary">
+          <strong>
+            {[address.first_name, address.last_name].filter(Boolean).join(' ')}
+          </strong>
+          <span>
+            {[address.city, address.state, address.pincode]
+              .filter(Boolean)
+              .join(', ')}
+          </span>
+        </section>
+      ) : (
+        <p className="pilot-payment-address-summary">
+          Delivery details will be completed at secure checkout.
+        </p>
+      )}
       <CheckoutPreferenceSelector
         value={checkoutPreference}
         onChange={(value) =>
@@ -1424,6 +1174,7 @@ async function verifyShiprocketAddressLogin(formData: FormData, env: Env) {
   const otp = String(formData.get('otp') || '').replace(/\D/g, '');
   const phone = String(formData.get('phone') || '').replace(/\D/g, '');
   if (!/^\d{6}$/.test(otp)) return {error: 'Enter the six-digit OTP.'};
+  let customerToken = '';
   try {
     const verified = await shiprocketRequest(
       env,
@@ -1434,9 +1185,15 @@ async function verifyShiprocketAddressLogin(formData: FormData, env: Env) {
         user_address_consent: true,
       },
     );
-    const customerToken = verified?.result?.authorised_customer_token;
+    customerToken = verified?.result?.authorised_customer_token || '';
     if (!customerToken)
       return {error: 'OTP verification did not return an address token.'};
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Could not verify OTP.',
+    };
+  }
+  try {
     const customer = await shiprocketRequest(env, '/api/v1/customer-data', {
       token: customerToken,
     });
@@ -1460,7 +1217,11 @@ async function verifyShiprocketAddressLogin(formData: FormData, env: Env) {
     };
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : 'Could not verify OTP.',
+      fallbackToShopify: true,
+      phone,
+      resolvedEmail: '',
+      addressLookupError:
+        error instanceof Error ? error.message : 'Could not retrieve address.',
     };
   }
 }
@@ -1470,7 +1231,6 @@ function checkoutIdentityFromForm(formData: FormData) {
   const email = value('email');
   const phone = value('phone').replace(/\D/g, '');
   if (
-    !isUsableCheckoutEmail(email) ||
     !value('firstName') ||
     !value('lastName') ||
     !value('address1') ||
@@ -1480,9 +1240,8 @@ function checkoutIdentityFromForm(formData: FormData) {
     phone.length < 10
   )
     return null;
-  return {
+  const identity: Record<string, unknown> = {
     countryCode: 'IN',
-    email,
     phone: `+91${phone.slice(-10)}`,
     deliveryAddressPreferences: [
       {
@@ -1500,6 +1259,8 @@ function checkoutIdentityFromForm(formData: FormData) {
       },
     ],
   };
+  if (isUsableCheckoutEmail(email)) identity.email = email;
+  return identity;
 }
 
 async function prepareCheckoutWithIdentity(
@@ -1602,15 +1363,6 @@ async function loadCheckoutProfileByPhone(phone: string, env: Env) {
   }
 }
 
-function isCompleteKnownCheckoutProfile(
-  profile: KnownCheckoutProfile | null,
-): profile is KnownCheckoutProfile {
-  return Boolean(
-    isUsableCheckoutEmail(profile?.email) &&
-    hasCompleteKnownCheckoutAddress(profile),
-  );
-}
-
 function hasCompleteKnownCheckoutAddress(
   profile?: KnownCheckoutProfile | null,
 ): profile is KnownCheckoutProfile {
@@ -1661,9 +1413,13 @@ async function prepareKnownVisitorCheckout(
   const buyerIdentity = knownCheckoutProfileToBuyerIdentity(profile);
   const result = await context.cart.updateBuyerIdentity(buyerIdentity as any);
   if (!result.cart || result.errors?.length) {
-    throw new Response('Could not attach customer details to checkout.', {
-      status: 502,
-    });
+    return checkoutPreference
+      ? await selectCheckoutDeliveryOption(
+          context,
+          cartWithPreference,
+          checkoutPreference,
+        )
+      : cartWithPreference;
   }
   const cartWithBuyer = result.cart;
   return checkoutPreference
@@ -1710,9 +1466,7 @@ async function updateCartCheckoutPreference(
             key: 'checkout_payment_preference',
             value: checkoutPreference,
           },
-          ...(journeyId
-            ? [{key: '_khoj_journey_id', value: journeyId}]
-            : []),
+          ...(journeyId ? [{key: '_khoj_journey_id', value: journeyId}] : []),
           {key: '_khoj_checkout_path', value: checkoutPath},
           {
             key: 'checkout_shipping_label',
@@ -1822,7 +1576,7 @@ function knownCheckoutProfileToBuyerIdentity(profile: KnownCheckoutProfile) {
   };
   if (profile.email) buyerIdentity.email = profile.email;
   if (profile.phone) buyerIdentity.phone = profile.phone;
-  if (address.address1) {
+  if (hasCompleteKnownCheckoutAddress(profile)) {
     buyerIdentity.deliveryAddressPreferences = [
       {
         deliveryAddress: {
