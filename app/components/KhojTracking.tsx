@@ -60,6 +60,13 @@ export type TrackEvent = {
     journeyId: string;
     stage: string;
     path?: 'unknown' | 'known' | 'shiprocket' | 'manual';
+    manualReason?:
+      | 'before_otp'
+      | 'during_otp'
+      | 'no_saved_address'
+      | 'different_address'
+      | 'known_profile_incomplete'
+      | 'shiprocket_error';
   };
 };
 
@@ -381,6 +388,7 @@ function trackMetaPixelActivity(event: TrackEvent) {
       ...metaProductParams(event),
       funnel_stage: event.funnel?.stage,
       funnel_path: event.funnel?.path,
+      manual_reason: event.funnel?.manualReason,
     }, {eventID: event.eventId});
   }
 }
@@ -433,6 +441,7 @@ function trackGoogleActivity(event: TrackEvent) {
       ...googleEcommerceParams(event),
       funnel_stage: event.funnel.stage,
       funnel_path: event.funnel.path,
+      manual_reason: event.funnel.manualReason,
       send_to: googleDestinationIds(),
       transport_type: 'beacon',
     });
@@ -520,6 +529,7 @@ export function trackKhojActivity(event: TrackEvent) {
           journey_id: event.funnel.journeyId,
           stage: event.funnel.stage,
           path: event.funnel.path || 'unknown',
+          manual_reason: event.funnel.manualReason,
         }
       : undefined,
   };

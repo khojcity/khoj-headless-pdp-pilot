@@ -456,6 +456,14 @@ type DeliveryAddress = {
   email?: string;
 };
 
+type ManualAddressReason =
+  | 'before_otp'
+  | 'during_otp'
+  | 'no_saved_address'
+  | 'different_address'
+  | 'known_profile_incomplete'
+  | 'shiprocket_error';
+
 function isUsableCheckoutEmail(email?: string) {
   const normalized = String(email || '').trim();
   return (
@@ -506,6 +514,8 @@ function AddressCheckoutFlow({
   const [checkoutPath, setCheckoutPath] = useState<
     'unknown' | 'known' | 'shiprocket' | 'manual'
   >(knownAddress ? 'known' : 'unknown');
+  const [manualAddressReason, setManualAddressReason] =
+    useState<ManualAddressReason | null>(null);
   const [enrichedCheckoutEventId] = useState(() =>
     khojTrackingEventId('enrichedcheckout'),
   );
@@ -522,6 +532,7 @@ function AddressCheckoutFlow({
         | 'checkout_handoff',
       path: 'unknown' | 'known' | 'shiprocket' | 'manual',
       customer?: DeliveryAddress | null,
+      manualReason?: ManualAddressReason | null,
     ) => {
       const key = `${stage}|${path}`;
       if (trackedStages.current.has(key)) return;
@@ -534,7 +545,12 @@ function AddressCheckoutFlow({
         customer: customer
           ? deliveryAddressTrackingCustomer(customer)
           : undefined,
-        funnel: {journeyId, stage, path},
+        funnel: {
+          journeyId,
+          stage,
+          path,
+          manualReason: manualReason || undefined,
+        },
       });
     },
     [baseTotal, journeyId, lines],
@@ -552,9 +568,11 @@ function AddressCheckoutFlow({
           email: fetcher.data.resolvedEmail || '',
         };
       trackFunnelStage('otp_verified', 'shiprocket', fetchedAddress);
-      setCheckoutPath(fetcher.data.addresses.length ? 'shiprocket' : 'manual');
+      const hasSavedAddress = fetcher.data.addresses.length > 0;
+      setCheckoutPath(hasSavedAddress ? 'shiprocket' : 'manual');
+      setManualAddressReason(hasSavedAddress ? null : 'no_saved_address');
       setAddress(fetchedAddress);
-      setStep(fetcher.data.addresses.length ? 'address' : 'manual');
+      setStep(hasSavedAddress ? 'address' : 'manual');
     }
   }, [fetcher.data, phone, trackFunnelStage]);
   useEffect(() => {
@@ -706,7 +724,16 @@ function AddressCheckoutFlow({
               </button>
               <button
                 className="pilot-address-secondary"
-                onClick={() => setStep('manual')}
+                onClick={() => {
+                  setManualAddressReason(
+                    error
+                      ? 'shiprocket_error'
+                      : knownProfile && !knownAddress
+                        ? 'known_profile_incomplete'
+                        : 'before_otp',
+                  );
+                  setStep('manual');
+                }}
                 type="button"
               >
                 Enter address manually
@@ -785,7 +812,12 @@ function AddressCheckoutFlow({
               </button>
               <button
                 className="pilot-address-secondary"
-                onClick={() => setStep('manual')}
+                onClick={() => {
+                  setManualAddressReason(
+                    error ? 'shiprocket_error' : 'during_otp',
+                  );
+                  setStep('manual');
+                }}
                 type="button"
               >
                 Enter address manually
@@ -797,6 +829,7 @@ function AddressCheckoutFlow({
               address={address}
               onManual={() => {
                 setCheckoutPath('manual');
+                setManualAddressReason('different_address');
                 setStep('manual');
               }}
               onContinue={(identity) => {
@@ -814,7 +847,12 @@ function AddressCheckoutFlow({
               onManual={() => setStep(address ? 'address' : 'phone')}
               onContinue={(identity) => {
                 setCheckoutPath('manual');
-                trackFunnelStage('address_ready', 'manual', identity);
+                trackFunnelStage(
+                  'address_ready',
+                  'manual',
+                  identity,
+                  manualAddressReason || 'before_otp',
+                );
                 setAddress(identity);
                 setCheckoutIdentity(identity);
                 setStep('payment');
