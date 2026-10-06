@@ -361,36 +361,6 @@ function trackMetaPixelActivity(event: TrackEvent) {
     return;
   }
 
-  if (event.eventType === 'checkout_started') {
-    fbq('track', 'InitiateCheckout', metaProductParams(event), {
-      eventID: event.eventId,
-    });
-    return;
-  }
-
-  if (event.eventType === 'enriched_checkout') {
-    fbq('trackCustom', 'EnrichedCheckout', metaProductParams(event), {
-      eventID: event.eventId,
-    });
-    return;
-  }
-
-  const funnelEventNames: Record<string, string> = {
-    cart_reached: 'CartReached',
-    phone_submitted: 'PhoneSubmitted',
-    otp_verified: 'OtpVerified',
-    address_ready: 'AddressReady',
-    checkout_handoff: 'CheckoutHandoff',
-  };
-  const funnelEventName = funnelEventNames[event.eventType];
-  if (funnelEventName) {
-    fbq('trackCustom', funnelEventName, {
-      ...metaProductParams(event),
-      funnel_stage: event.funnel?.stage,
-      funnel_path: event.funnel?.path,
-      manual_reason: event.funnel?.manualReason,
-    }, {eventID: event.eventId});
-  }
 }
 
 function trackGoogleActivity(event: TrackEvent) {
