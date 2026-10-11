@@ -227,22 +227,43 @@ export default function Cart() {
       <CartPageTracking cart={cart} knownProfile={knownProfile} lines={lines} />
       <div className="pilot-cart-header">
         <div>
-          <p className="pilot-kicker">Review your order</p>
+          <p className="pilot-kicker">
+            {hasItems ? 'Review your order' : 'Shopping bag'}
+          </p>
           <h1>Your cart</h1>
-          <p>Review your handmade jewellery order before moving to checkout.</p>
+          <p>
+            {hasItems
+              ? 'Review your handmade jewellery order before moving to checkout.'
+              : 'Your selected handmade jewellery will appear here.'}
+          </p>
         </div>
       </div>
 
       {!hasItems ? (
         <section className="pilot-cart-empty">
-          <h2>Your cart is empty</h2>
-          <p>Choose the Mor Pankh necklace set to continue the pilot flow.</p>
-          <Link
-            className="pilot-button pilot-button-primary"
-            to="/products/mor-pankh-classic-multi-color-hand-painted-necklace-set-hp-np"
-          >
-            View product
-          </Link>
+          <div>
+            <h2>Your cart is empty</h2>
+            <p>
+              Explore our handpainted jewellery collections and find something
+              made for you.
+            </p>
+          </div>
+          <div className="pilot-cart-empty-actions">
+            <Link
+              className="pilot-button pilot-button-primary"
+              to="/collections"
+              prefetch="intent"
+            >
+              Browse collections
+            </Link>
+            <Link
+              className="pilot-cart-empty-link"
+              to="/collections/all"
+              prefetch="intent"
+            >
+              View all jewellery
+            </Link>
+          </div>
         </section>
       ) : (
         <>
@@ -397,6 +418,7 @@ function CartPageTracking({
       checkoutUrl: cart?.checkoutUrl,
       customer: knownProfileTrackingCustomer(knownProfile),
     });
+    if (lines.length === 0) return;
     const journeyId = khojCheckoutJourneyId(cart?.id);
     trackKhojActivity({
       eventType: 'cart_reached',

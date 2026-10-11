@@ -1770,8 +1770,34 @@ button.reset:hover:not(:has(> *)) {
 .pilot-cart-empty {
   display: grid;
   justify-items: start;
-  gap: 16px;
+  gap: 24px;
   padding: 32px;
+}
+
+.pilot-cart-empty > div:first-child {
+  display: grid;
+  gap: 10px;
+}
+
+.pilot-cart-empty p {
+  color: #596858;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 32rem;
+}
+
+.pilot-cart-empty-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.pilot-cart-empty-link {
+  color: #142016;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 5px;
 }
 
 .pilot-cart-layout {
@@ -2846,6 +2872,26 @@ button.reset:hover:not(:has(> *)) {
 
   .pilot-cart-header a {
     justify-self: start;
+  }
+
+  .pilot-cart-empty {
+    gap: 20px;
+    padding: 24px 18px;
+  }
+
+  .pilot-cart-empty-actions {
+    align-items: stretch;
+    display: grid;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .pilot-cart-empty-actions .pilot-button {
+    width: 100%;
+  }
+
+  .pilot-cart-empty-link {
+    justify-self: center;
   }
 
   .pilot-cart-infographic {
