@@ -1,5 +1,5 @@
 import {Suspense, useMemo, useState} from 'react';
-import {Await, data, redirect, useLoaderData} from 'react-router';
+import {Await, data, redirect, useLoaderData, useLocation} from 'react-router';
 import type {Route} from './+types/products.$handle';
 import {
   Analytics,
@@ -26,6 +26,39 @@ const DEFAULT_PILOT_HANDLE =
 
 function mainStoreProductUrl(handle?: string) {
   return `https://www.khoj.city/products/${handle || DEFAULT_PILOT_HANDLE}`;
+}
+
+const ATTRIBUTION_PARAMS = [
+  'utm_source',
+  'utm_medium',
+  'utm_campaign',
+  'utm_id',
+  'utm_term',
+  'utm_content',
+  'fbclid',
+  'gclid',
+  'gbraid',
+  'wbraid',
+] as const;
+
+function mainStoreCartUrl(variantGid?: string, search = '') {
+  const variantId = variantGid?.split('/').pop();
+
+  if (!variantId || !/^\d+$/.test(variantId)) return '/cart';
+
+  const url = new URL(`https://www.khoj.city/cart/${variantId}:1`);
+  const currentParams = new URLSearchParams(search);
+
+  url.searchParams.set('storefront', 'true');
+  url.searchParams.set('ref', 'hydrogen_buy_now');
+  url.searchParams.set('attributes[khoj_source]', 'hydrogen_buy_now');
+
+  for (const param of ATTRIBUTION_PARAMS) {
+    const value = currentParams.get(param);
+    if (value) url.searchParams.set(param, value);
+  }
+
+  return url.toString();
 }
 
 function pilotProductUrl(handle?: string) {
@@ -441,6 +474,12 @@ function PilotProductForm({
   selectedVariant: any;
   addToCartTracking: () => TrackEvent;
 }) {
+  const location = useLocation();
+  const buyNowCartUrl = mainStoreCartUrl(
+    selectedVariant?.id,
+    location.search,
+  );
+
   return (
     <div className="pilot-form">
       {productOptions.map((option) => {
@@ -490,7 +529,7 @@ function PilotProductForm({
               ? [{merchandiseId: selectedVariant.id, quantity: 1}]
               : []
           }
-          redirectTo="/cart"
+          redirectTo={buyNowCartUrl}
         >
           Buy now
         </AddToCartButton>
