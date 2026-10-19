@@ -41,7 +41,11 @@ const ATTRIBUTION_PARAMS = [
   'wbraid',
 ] as const;
 
-function mainStoreCartUrl(variantGid?: string, search = '') {
+function mainStoreCartUrl(
+  variantGid?: string,
+  search = '',
+  source = 'hydrogen_buy_now',
+) {
   const variantId = variantGid?.split('/').pop();
 
   if (!variantId || !/^\d+$/.test(variantId)) return '/cart';
@@ -50,8 +54,8 @@ function mainStoreCartUrl(variantGid?: string, search = '') {
   const currentParams = new URLSearchParams(search);
 
   url.searchParams.set('storefront', 'true');
-  url.searchParams.set('ref', 'hydrogen_buy_now');
-  url.searchParams.set('attributes[khoj_source]', 'hydrogen_buy_now');
+  url.searchParams.set('ref', source);
+  url.searchParams.set('attributes[khoj_source]', source);
 
   for (const param of ATTRIBUTION_PARAMS) {
     const value = currentParams.get(param);
@@ -108,7 +112,7 @@ export async function loader(args: Route.LoaderArgs) {
 
 async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const {handle} = params;
-  const {storefront} = context;
+  const {env, storefront} = context;
 
   if (!handle) throw new Error('Expected product handle to be defined');
 
@@ -124,7 +128,11 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   redirectIfHandleIsLocalized(request, {handle, data: product});
 
-  return {product};
+  return {
+    product,
+    mainStoreCartHandoffEnabled:
+      env.PUBLIC_MAIN_STORE_CART_HANDOFF_ENABLED !== 'false',
+  };
 }
 
 function loadDeferredData({context}: Route.LoaderArgs, productId: string) {
@@ -144,7 +152,9 @@ function loadDeferredData({context}: Route.LoaderArgs, productId: string) {
 }
 
 export default function Product() {
-  const {product, recommendations} = useLoaderData<typeof loader>();
+  const {product, recommendations, mainStoreCartHandoffEnabled} =
+    useLoaderData<typeof loader>();
+  const location = useLocation();
   const content = getProductPageContent(product.handle);
   const productUrl = mainStoreProductUrl(product.handle);
   const selectedVariant = useOptimisticVariant(
@@ -199,6 +209,16 @@ export default function Product() {
   });
 
   const savings = getSavings(selectedVariant);
+  const mainStoreAddToCartUrl = mainStoreCartUrl(
+    selectedVariant?.id,
+    location.search,
+    'hydrogen_add_to_cart',
+  );
+  const mainStoreBuyNowUrl = mainStoreCartUrl(
+    selectedVariant?.id,
+    location.search,
+    'hydrogen_buy_now',
+  );
 
   return (
     <article className="pilot-pdp">
@@ -250,6 +270,9 @@ export default function Product() {
               productOptions={productOptions}
               selectedVariant={selectedVariant}
               addToCartTracking={addToCartTracking}
+              mainStoreCartHandoffEnabled={mainStoreCartHandoffEnabled}
+              mainStoreAddToCartUrl={mainStoreAddToCartUrl}
+              mainStoreBuyNowUrl={mainStoreBuyNowUrl}
             />
 
             <div
@@ -342,20 +365,31 @@ export default function Product() {
           </span>
           <small>Free delivery</small>
         </div>
-        <AddToCartButton
-          className="pilot-button pilot-button-primary"
-          disabled={!selectedVariant?.availableForSale}
-          redirectTo="/cart"
-          replaceExisting
-          lines={
-            selectedVariant
-              ? [{merchandiseId: selectedVariant.id, quantity: 1}]
-              : []
-          }
-          onClick={() => trackKhojActivity(addToCartTracking())}
-        >
-          {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
-        </AddToCartButton>
+        {mainStoreCartHandoffEnabled ? (
+          <MainStoreCartLink
+            className="pilot-button pilot-button-primary"
+            disabled={!selectedVariant?.availableForSale}
+            href={mainStoreAddToCartUrl}
+            onClick={() => trackKhojActivity(addToCartTracking())}
+          >
+            {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
+          </MainStoreCartLink>
+        ) : (
+          <AddToCartButton
+            className="pilot-button pilot-button-primary"
+            disabled={!selectedVariant?.availableForSale}
+            redirectTo="/cart"
+            replaceExisting
+            lines={
+              selectedVariant
+                ? [{merchandiseId: selectedVariant.id, quantity: 1}]
+                : []
+            }
+            onClick={() => trackKhojActivity(addToCartTracking())}
+          >
+            {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
+          </AddToCartButton>
+        )}
       </div>
 
       <Analytics.ProductView
@@ -469,17 +503,17 @@ function PilotProductForm({
   productOptions,
   selectedVariant,
   addToCartTracking,
+  mainStoreCartHandoffEnabled,
+  mainStoreAddToCartUrl,
+  mainStoreBuyNowUrl,
 }: {
   productOptions: any[];
   selectedVariant: any;
   addToCartTracking: () => TrackEvent;
+  mainStoreCartHandoffEnabled: boolean;
+  mainStoreAddToCartUrl: string;
+  mainStoreBuyNowUrl: string;
 }) {
-  const location = useLocation();
-  const buyNowCartUrl = mainStoreCartUrl(
-    selectedVariant?.id,
-    location.search,
-  );
-
   return (
     <div className="pilot-form">
       {productOptions.map((option) => {
@@ -505,36 +539,85 @@ function PilotProductForm({
       })}
 
       <div className="pilot-actions">
-        <AddToCartButton
-          className="pilot-button pilot-button-secondary"
-          disabled={!selectedVariant?.availableForSale}
-          redirectTo="/cart"
-          replaceExisting
-          lines={
-            selectedVariant
-              ? [{merchandiseId: selectedVariant.id, quantity: 1}]
-              : []
-          }
-          onClick={() => trackKhojActivity(addToCartTracking())}
-        >
-          {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
-        </AddToCartButton>
-
-        <AddToCartButton
-          className="pilot-button pilot-button-primary"
-          disabled={!selectedVariant?.availableForSale}
-          replaceExisting
-          lines={
-            selectedVariant
-              ? [{merchandiseId: selectedVariant.id, quantity: 1}]
-              : []
-          }
-          redirectTo={buyNowCartUrl}
-        >
-          Buy now
-        </AddToCartButton>
+        {mainStoreCartHandoffEnabled ? (
+          <>
+            <MainStoreCartLink
+              className="pilot-button pilot-button-secondary"
+              disabled={!selectedVariant?.availableForSale}
+              href={mainStoreAddToCartUrl}
+              onClick={() => trackKhojActivity(addToCartTracking())}
+            >
+              {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
+            </MainStoreCartLink>
+            <MainStoreCartLink
+              className="pilot-button pilot-button-primary"
+              disabled={!selectedVariant?.availableForSale}
+              href={mainStoreBuyNowUrl}
+            >
+              Buy now
+            </MainStoreCartLink>
+          </>
+        ) : (
+          <>
+            <AddToCartButton
+              className="pilot-button pilot-button-secondary"
+              disabled={!selectedVariant?.availableForSale}
+              redirectTo="/cart"
+              replaceExisting
+              lines={
+                selectedVariant
+                  ? [{merchandiseId: selectedVariant.id, quantity: 1}]
+                  : []
+              }
+              onClick={() => trackKhojActivity(addToCartTracking())}
+            >
+              {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
+            </AddToCartButton>
+            <AddToCartButton
+              className="pilot-button pilot-button-primary"
+              disabled={!selectedVariant?.availableForSale}
+              replaceExisting
+              lines={
+                selectedVariant
+                  ? [{merchandiseId: selectedVariant.id, quantity: 1}]
+                  : []
+              }
+              redirectTo="/cart"
+            >
+              Buy now
+            </AddToCartButton>
+          </>
+        )}
       </div>
     </div>
+  );
+}
+
+function MainStoreCartLink({
+  children,
+  className,
+  disabled,
+  href,
+  onClick,
+}: {
+  children: React.ReactNode;
+  className: string;
+  disabled: boolean;
+  href: string;
+  onClick?: () => void;
+}) {
+  if (disabled) {
+    return (
+      <button className={className} disabled type="button">
+        {children}
+      </button>
+    );
+  }
+
+  return (
+    <a className={className} href={href} onClick={onClick}>
+      {children}
+    </a>
   );
 }
 

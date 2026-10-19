@@ -507,18 +507,25 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .pilot-actions form,
-.pilot-actions button {
+.pilot-actions button,
+.pilot-actions a {
   width: 100%;
 }
 
 .pilot-button {
+  align-items: center;
   border: 1px solid #111a12;
+  box-sizing: border-box;
   cursor: pointer;
+  display: flex;
   font: inherit;
   font-weight: 800;
+  justify-content: center;
   letter-spacing: 0.08em;
   min-height: 52px;
   padding: 0 18px;
+  text-align: center;
+  text-decoration: none;
   text-transform: uppercase;
 }
 

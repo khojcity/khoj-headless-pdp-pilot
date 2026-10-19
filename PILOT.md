@@ -39,6 +39,8 @@ Copy `.env.example` to `.env` and fill:
 - `SESSION_SECRET`
 - `PUBLIC_STOREFRONT_API_TOKEN`
 - `PUBLIC_KHOJ_SITE_ACTIVITY_PUBLIC_TOKEN`
+- `PUBLIC_MAIN_STORE_CART_HANDOFF_ENABLED` (`true` sends PDP cart actions to
+  the main Shopify/Razorpay cart; `false` restores the Hydrogen cart)
 
 ## Local Development
 
